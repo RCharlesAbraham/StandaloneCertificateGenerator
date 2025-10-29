@@ -24,16 +24,104 @@ let signatures = {
 // Template image
 let templateImage = null;
 
-// Text placeholders with draggable positions and sizes
-let textPlaceholders = {
-    certNo: { x: 0.793, y: 0.155, fontSize: 9, label: 'Certificate No', varName: '{{VAR2}}', dragging: false },
-    name: { x: 0.558, y: 0.537, fontSize: 32, label: 'Name', varName: '{{VAR1}}', dragging: false },
-    certifiedFor: { x: 0.558, y: 0.632, fontSize: 14, label: 'Certified For', varName: '{{VAR3}}', dragging: false },
-    fromDate: { x: 0.563, y: 0.665, fontSize: 11, label: 'From Date', varName: '{{VAR7}}', dragging: false },
-    toDate: { x: 0.755, y: 0.665, fontSize: 11, label: 'To Date', varName: '{{VAR8}}', dragging: false },
-    sig1: { x: 0.402, y: 0.805, width: 95, height: 38, label: 'Signature 1', varName: '{{VAR4}}', dragging: false },
-    sig2: { x: 0.583, y: 0.805, width: 95, height: 38, label: 'Signature 2', varName: '{{VAR5}}', dragging: false },
-    sig3: { x: 0.764, y: 0.805, width: 95, height: 38, label: 'Signature 3', varName: '{{VAR6}}', dragging: false }
+// Store Excel data for batch processing
+let excelData = [];
+let currentRowIndex = 0;
+
+// Text placeholders with draggable positions and sizes (will be loaded from localStorage or config.json)
+let textPlaceholders = {};
+
+// Load configuration from localStorage first, then fallback to config.json
+const loadConfig = async () => {
+    // Try to load from localStorage first
+    const savedConfig = localStorage.getItem('certificateConfig');
+    if (savedConfig) {
+        try {
+            const config = JSON.parse(savedConfig);
+            textPlaceholders = config.textPlaceholders;
+            console.log('✅ Configuration loaded from localStorage');
+            renderCertificate();
+            return;
+        } catch (error) {
+            console.error('❌ Error parsing localStorage config:', error);
+        }
+    }
+
+    // Fallback to config.json if no localStorage data
+    try {
+        const response = await fetch('config.json');
+        const config = await response.json();
+        textPlaceholders = config.textPlaceholders;
+        console.log('✅ Configuration loaded from config.json');
+        // Save to localStorage for future use
+        saveConfig();
+        renderCertificate();
+    } catch (error) {
+        console.error('❌ Error loading config.json, using default values:', error);
+        // Fallback to default values if config.json is not available
+        textPlaceholders = {
+            certNo: { x: 0.849, y: 0.121, fontSize: 25, label: 'Certificate No', varName: '{{VAR2}}', dragging: false },
+            name: { x: 0.663, y: 0.538, fontSize: 60, label: 'Name', varName: '{{VAR1}}', dragging: false },
+            certifiedFor: { x: 0.417, y: 0.622, fontSize: 30, label: 'Certified For', varName: '{{VAR3}}', dragging: false },
+            fromDate: { x: 0.734, y: 0.658, fontSize: 28, label: 'From Date', varName: '{{VAR7}}', dragging: false },
+            toDate: { x: 0.891, y: 0.658, fontSize: 28, label: 'To Date', varName: '{{VAR8}}', dragging: false },
+            sig1: { x: 0.430, y: 0.800, width: 170, height: 70, label: 'Signature 1', varName: '{{VAR4}}', dragging: false },
+            sig2: { x: 0.639, y: 0.804, width: 170, height: 70, label: 'Signature 2', varName: '{{VAR5}}', dragging: false },
+            sig3: { x: 0.848, y: 0.803, width: 170, height: 70, label: 'Signature 3', varName: '{{VAR6}}', dragging: false }
+        };
+        saveConfig();
+        renderCertificate();
+    }
+};
+
+// Save configuration to localStorage automatically
+const saveConfig = () => {
+    const config = {
+        textPlaceholders: textPlaceholders
+    };
+    
+    localStorage.setItem('certificateConfig', JSON.stringify(config, null, 2));
+    console.log('💾 Configuration auto-saved');
+    
+    // Show visual feedback
+    showSaveIndicator();
+};
+
+// Show save indicator (brief visual feedback)
+const showSaveIndicator = () => {
+    // Create or reuse indicator
+    let indicator = document.getElementById('saveIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'saveIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        `;
+        indicator.innerHTML = '💾 Saved!';
+        document.body.appendChild(indicator);
+    }
+    
+    // Show and hide with animation
+    indicator.style.display = 'block';
+    indicator.style.animation = 'fadeIn 0.3s';
+    
+    setTimeout(() => {
+        indicator.style.animation = 'fadeOut 0.3s';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 300);
+    }, 1500);
 };
 
 let selectedPlaceholder = null;
@@ -279,10 +367,13 @@ excelFileInput.addEventListener('change', (e) => {
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-            // Assuming first row is headers, second row is data
-            if (jsonData.length > 1) {
-                const headers = jsonData[0];
-                const values = jsonData[1];
+            // Store all data rows (skip header)
+            excelData = jsonData.slice(1).filter(row => row.length > 0 && row[0]);
+            
+            if (excelData.length > 0) {
+                // Load first row into form
+                const values = excelData[0];
+                currentRowIndex = 0;
 
                 // Map Excel columns to form fields
                 // Expected columns: Certificate No, Name, Certified For, From Date, To Date
@@ -294,7 +385,12 @@ excelFileInput.addEventListener('change', (e) => {
 
                 renderCertificate();
 
-                alert('Excel data loaded successfully!');
+                // Show the "Generate All PDFs" button
+                document.getElementById('generateAllBtn').style.display = 'flex';
+
+                alert(`Excel data loaded successfully!\nFound ${excelData.length} certificate(s) to generate.`);
+            } else {
+                alert('No data found in Excel file.');
             }
         };
         reader.readAsArrayBuffer(file);
@@ -318,8 +414,8 @@ const formatDateForInput = (excelDate) => {
     return '';
 };
 
-// Generate PDF
-generateBtn.addEventListener('click', () => {
+// Function to generate a single PDF
+const generateSinglePDF = (certNo, name, certifiedFor, fromDate, toDate) => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({
         orientation: 'landscape',
@@ -332,10 +428,110 @@ generateBtn.addEventListener('click', () => {
     pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
 
     // Generate filename
-    const filename = `Certificate_${certNoInput.value || 'Draft'}_${Date.now()}.pdf`;
+    const filename = `Certificate_${certNo || 'Draft'}.pdf`;
+    return { pdf, filename };
+};
+
+// Generate single PDF (current form data)
+generateBtn.addEventListener('click', () => {
+    const { pdf, filename } = generateSinglePDF(
+        certNoInput.value,
+        nameInput.value,
+        certifiedForInput.value,
+        fromDateInput.value,
+        toDateInput.value
+    );
+    
+    pdf.save(filename);
+    alert('PDF generated successfully!');
+});
+
+// Generate all PDFs from Excel data (combined into single multi-page PDF)
+document.getElementById('generateAllBtn').addEventListener('click', async () => {
+    if (excelData.length === 0) {
+        alert('No data loaded. Please upload an Excel file first.');
+        return;
+    }
+
+    // Confirm before proceeding
+    const confirm = window.confirm(`Generate ${excelData.length} certificates in a single PDF file?\n\nThis will create one multi-page PDF with all certificates.`);
+    if (!confirm) return;
+
+    // Show progress
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    progressContainer.style.display = 'block';
+    document.getElementById('generateAllBtn').disabled = true;
+
+    // Create a single PDF document
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+    });
+
+    let isFirstPage = true;
+    
+    for (let i = 0; i < excelData.length; i++) {
+        const row = excelData[i];
+        
+        // Update form fields with current row data
+        const certNo = row[0] || '';
+        const name = row[1] || '';
+        const certifiedFor = row[2] || '';
+        const fromDate = formatDateForInput(row[3]);
+        const toDate = formatDateForInput(row[4]);
+
+        certNoInput.value = certNo;
+        nameInput.value = name;
+        certifiedForInput.value = certifiedFor;
+        fromDateInput.value = fromDate;
+        toDateInput.value = toDate;
+
+        // Render the certificate with current data
+        renderCertificate();
+
+        // Wait a bit for canvas to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Add page to PDF (except for the first one which is already created)
+        if (!isFirstPage) {
+            pdf.addPage([canvas.width, canvas.height], 'landscape');
+        }
+        isFirstPage = false;
+
+        // Convert canvas to image and add to current page
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+        // Update progress
+        const progress = ((i + 1) / excelData.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `Generating... ${i + 1}/${excelData.length}`;
+
+        // Small delay to ensure smooth rendering
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `Certificates_Batch_${timestamp}_${excelData.length}certs.pdf`;
+    
+    // Save the combined PDF
     pdf.save(filename);
 
-    alert('PDF generated successfully!');
+    // Hide progress and re-enable button
+    progressBar.style.width = '100%';
+    progressText.textContent = `Complete! Generated ${excelData.length} certificates in one PDF.`;
+    
+    setTimeout(() => {
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+        document.getElementById('generateAllBtn').disabled = false;
+        alert(`Successfully generated ${excelData.length} certificates in a single PDF file!\n\nFile: ${filename}`);
+    }, 2000);
 });
 
 // Add event listeners for real-time updates
@@ -521,6 +717,9 @@ canvas.addEventListener('mouseup', () => {
                 console.log(`✅ Final ${selectedPlaceholder}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, width=${p.width}, height=${p.height}`);
             }
         }
+
+        // Auto-save configuration after any change
+        saveConfig();
     }
 }); canvas.addEventListener('dblclick', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -534,6 +733,7 @@ canvas.addEventListener('mouseup', () => {
             textPlaceholders[selectedPlaceholder].fontSize = parseInt(newSize);
             renderCertificate();
             console.log(`${selectedPlaceholder} fontSize: ${newSize}`);
+            saveConfig(); // Auto-save
         }
     } else if (selectedPlaceholder) {
         const newWidth = prompt(`Enter width for ${textPlaceholders[selectedPlaceholder].label}:`, textPlaceholders[selectedPlaceholder].width);
@@ -543,6 +743,7 @@ canvas.addEventListener('mouseup', () => {
             textPlaceholders[selectedPlaceholder].height = parseInt(newHeight);
             renderCertificate();
             console.log(`${selectedPlaceholder} size: ${newWidth}x${newHeight}`);
+            saveConfig(); // Auto-save
         }
     }
 });
@@ -553,26 +754,31 @@ document.addEventListener('keydown', (e) => {
 
     const step = e.shiftKey ? 0.001 : 0.005;
     const placeholder = textPlaceholders[selectedPlaceholder];
+    let configChanged = false;
 
     switch (e.key) {
         case 'ArrowLeft':
             placeholder.x -= step;
             renderCertificate();
+            configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowRight':
             placeholder.x += step;
             renderCertificate();
+            configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowUp':
             placeholder.y -= step;
             renderCertificate();
+            configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowDown':
             placeholder.y += step;
             renderCertificate();
+            configChanged = true;
             e.preventDefault();
             break;
         case 'Escape':
@@ -584,6 +790,7 @@ document.addEventListener('keydown', (e) => {
             if (placeholder.fontSize) {
                 placeholder.fontSize += 1;
                 renderCertificate();
+                configChanged = true;
                 e.preventDefault();
             }
             break;
@@ -592,9 +799,15 @@ document.addEventListener('keydown', (e) => {
             if (placeholder.fontSize && placeholder.fontSize > 1) {
                 placeholder.fontSize -= 1;
                 renderCertificate();
+                configChanged = true;
                 e.preventDefault();
             }
             break;
+    }
+
+    // Auto-save after keyboard adjustments
+    if (configChanged) {
+        saveConfig();
     }
 });
 
@@ -606,35 +819,21 @@ document.getElementById('toggleGrid').addEventListener('click', () => {
 });
 
 document.getElementById('copyPositions').addEventListener('click', () => {
-    const positions = {};
+    // Manual save (already auto-saved, but provides user feedback)
+    saveConfig();
+    
+    // Show current positions in console
+    console.log('Current placeholder positions:');
     for (let key in textPlaceholders) {
         const p = textPlaceholders[key];
         if (p.fontSize) {
-            positions[key] = { x: p.x.toFixed(3), y: p.y.toFixed(3), fontSize: p.fontSize };
+            console.log(`${key}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, fontSize=${p.fontSize}`);
         } else {
-            positions[key] = { x: p.x.toFixed(3), y: p.y.toFixed(3), width: p.width, height: p.height };
+            console.log(`${key}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, width=${p.width}, height=${p.height}`);
         }
     }
-
-    const output = `// Text placeholders with draggable positions and sizes
-let textPlaceholders = {
-    certNo: { x: ${textPlaceholders.certNo.x.toFixed(3)}, y: ${textPlaceholders.certNo.y.toFixed(3)}, fontSize: ${textPlaceholders.certNo.fontSize}, label: 'Certificate No', varName: '{{VAR2}}', dragging: false },
-    name: { x: ${textPlaceholders.name.x.toFixed(3)}, y: ${textPlaceholders.name.y.toFixed(3)}, fontSize: ${textPlaceholders.name.fontSize}, label: 'Name', varName: '{{VAR1}}', dragging: false },
-    certifiedFor: { x: ${textPlaceholders.certifiedFor.x.toFixed(3)}, y: ${textPlaceholders.certifiedFor.y.toFixed(3)}, fontSize: ${textPlaceholders.certifiedFor.fontSize}, label: 'Certified For', varName: '{{VAR3}}', dragging: false },
-    fromDate: { x: ${textPlaceholders.fromDate.x.toFixed(3)}, y: ${textPlaceholders.fromDate.y.toFixed(3)}, fontSize: ${textPlaceholders.fromDate.fontSize}, label: 'From Date', varName: '{{VAR7}}', dragging: false },
-    toDate: { x: ${textPlaceholders.toDate.x.toFixed(3)}, y: ${textPlaceholders.toDate.y.toFixed(3)}, fontSize: ${textPlaceholders.toDate.fontSize}, label: 'To Date', varName: '{{VAR8}}', dragging: false },
-    sig1: { x: ${textPlaceholders.sig1.x.toFixed(3)}, y: ${textPlaceholders.sig1.y.toFixed(3)}, width: ${textPlaceholders.sig1.width}, height: ${textPlaceholders.sig1.height}, label: 'Signature 1', varName: '{{VAR4}}', dragging: false },
-    sig2: { x: ${textPlaceholders.sig2.x.toFixed(3)}, y: ${textPlaceholders.sig2.y.toFixed(3)}, width: ${textPlaceholders.sig2.width}, height: ${textPlaceholders.sig2.height}, label: 'Signature 2', varName: '{{VAR5}}', dragging: false },
-    sig3: { x: ${textPlaceholders.sig3.x.toFixed(3)}, y: ${textPlaceholders.sig3.y.toFixed(3)}, width: ${textPlaceholders.sig3.width}, height: ${textPlaceholders.sig3.height}, label: 'Signature 3', varName: '{{VAR6}}', dragging: false }
-};`;
-
-    navigator.clipboard.writeText(output).then(() => {
-        alert('✅ Positions copied to clipboard!\n\nPaste this into your script.js file to save the positions permanently.');
-        console.log(output);
-    }).catch(err => {
-        console.log(output);
-        alert('Positions logged to console. Copy from there.');
-    });
+    
+    alert('✅ Configuration saved!\n\nYour placeholder positions are automatically saved.\nCheck the console for current position values.');
 });
 
 // Zoom functionality
@@ -689,4 +888,5 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Initialize
+loadConfig(); // Load configuration from config.json first
 loadTemplate();

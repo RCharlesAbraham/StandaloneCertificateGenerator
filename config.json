@@ -1,0 +1,71 @@
+{
+  "textPlaceholders": {
+    "certNo": {
+      "x": 0.849,
+      "y": 0.121,
+      "fontSize": 25,
+      "label": "Certificate No",
+      "varName": "{{VAR2}}",
+      "dragging": false
+    },
+    "name": {
+      "x": 0.663,
+      "y": 0.538,
+      "fontSize": 60,
+      "label": "Name",
+      "varName": "{{VAR1}}",
+      "dragging": false
+    },
+    "certifiedFor": {
+      "x": 0.417,
+      "y": 0.622,
+      "fontSize": 30,
+      "label": "Certified For",
+      "varName": "{{VAR3}}",
+      "dragging": false
+    },
+    "fromDate": {
+      "x": 0.734,
+      "y": 0.658,
+      "fontSize": 28,
+      "label": "From Date",
+      "varName": "{{VAR7}}",
+      "dragging": false
+    },
+    "toDate": {
+      "x": 0.891,
+      "y": 0.658,
+      "fontSize": 28,
+      "label": "To Date",
+      "varName": "{{VAR8}}",
+      "dragging": false
+    },
+    "sig1": {
+      "x": 0.430,
+      "y": 0.800,
+      "width": 170,
+      "height": 70,
+      "label": "Signature 1",
+      "varName": "{{VAR4}}",
+      "dragging": false
+    },
+    "sig2": {
+      "x": 0.639,
+      "y": 0.804,
+      "width": 170,
+      "height": 70,
+      "label": "Signature 2",
+      "varName": "{{VAR5}}",
+      "dragging": false
+    },
+    "sig3": {
+      "x": 0.848,
+      "y": 0.803,
+      "width": 170,
+      "height": 70,
+      "label": "Signature 3",
+      "varName": "{{VAR6}}",
+      "dragging": false
+    }
+  }
+}
