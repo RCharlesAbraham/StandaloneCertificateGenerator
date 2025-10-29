@@ -1,0 +1,357 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar - 25% */
+.sidebar {
+    width: 25%;
+    background: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #8b1538;
+}
+
+.header svg {
+    color: #8b1538;
+}
+
+.header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #8b1538;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group label svg {
+    color: #8b1538;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"] {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="date"]:focus {
+    outline: none;
+    border-color: #8b1538;
+    box-shadow: 0 0 0 3px rgba(139, 21, 56, 0.1);
+}
+
+.signature-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    width: fit-content;
+}
+
+.upload-btn:hover {
+    background: #8b1538;
+    color: white;
+    border-color: #8b1538;
+}
+
+.upload-btn:hover svg {
+    color: white;
+}
+
+.upload-btn svg {
+    color: #8b1538;
+}
+
+.file-name {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+    margin-left: 4px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #8b1538;
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background: #6d1029;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 21, 56, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: #f8f8f8;
+    color: #333;
+    border: 1px solid #ddd;
+    margin-top: 5px;
+}
+
+.btn-secondary:hover {
+    background: #e8e8e8;
+    border-color: #8b1538;
+    color: #8b1538;
+    transform: none;
+}
+
+.calibration-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 20px 0;
+}
+
+.help-box {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-left: 3px solid #8b1538;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+}
+
+.help-box h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b1538;
+    margin-bottom: 10px;
+}
+
+.help-box h3 svg {
+    color: #8b1538;
+}
+
+.help-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.help-box li {
+    font-size: 12px;
+    color: #666;
+    padding: 4px 0;
+    padding-left: 16px;
+    position: relative;
+}
+
+.help-box li:before {
+    content: "•";
+    color: #8b1538;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.help-box strong {
+    color: #333;
+}
+
+/* Canvas Area - 75% */
+.canvas-area {
+    width: 75%;
+    display: flex;
+    flex-direction: column;
+    background: #f9f9f9;
+}
+
+.canvas-header {
+    padding: 20px 30px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.canvas-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.canvas-header svg {
+    color: #8b1538;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-btn:hover {
+    background: #8b1538;
+    border-color: #8b1538;
+}
+
+.zoom-btn:hover svg {
+    stroke: white;
+}
+
+.zoom-btn svg {
+    stroke: #8b1538;
+}
+
+.zoom-level {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b1538;
+    min-width: 50px;
+    text-align: center;
+}
+
+.canvas-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    overflow: auto;
+    position: relative;
+}
+
+#certificateCanvas {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: white;
+    cursor: default;
+    transition: transform 0.1s ease;
+    transform-origin: center center;
+}
+
+/* Scrollbar Styling */
+.sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #8b1538;
+    border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #6d1029;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+    }
+
+    .canvas-area {
+        width: 100%;
+        height: 60vh;
+    }
+}
