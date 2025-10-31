@@ -183,6 +183,11 @@ body {
     gap: 8px;
 }
 
+.instruction-item {
+    display: inline-block;
+    padding-left: 24px;
+}
+
 .divider {
     height: 1px;
     background: #e0e0e0;
