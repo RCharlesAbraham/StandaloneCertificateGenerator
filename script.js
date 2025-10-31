@@ -79,10 +79,10 @@ const saveConfig = () => {
     const config = {
         textPlaceholders: textPlaceholders
     };
-    
+
     localStorage.setItem('certificateConfig', JSON.stringify(config, null, 2));
     console.log('💾 Configuration auto-saved');
-    
+
     // Show visual feedback
     showSaveIndicator();
 };
@@ -111,11 +111,11 @@ const showSaveIndicator = () => {
         indicator.innerHTML = '💾 Saved!';
         document.body.appendChild(indicator);
     }
-    
+
     // Show and hide with animation
     indicator.style.display = 'block';
     indicator.style.animation = 'fadeIn 0.3s';
-    
+
     setTimeout(() => {
         indicator.style.animation = 'fadeOut 0.3s';
         setTimeout(() => {
@@ -131,7 +131,7 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 
 // Zoom and pan variables
-let zoomLevel = 1;
+let zoomLevel = 0.5; // Default 50% actual zoom (shown as 100%)
 let panX = 0;
 let panY = 0;
 let isPanning = false;
@@ -236,14 +236,14 @@ const renderCertificate = () => {
     ctx.fillText(certifiedFor, certForX, certForY);
 
     // Draw From Date
-    ctx.font = `${textPlaceholders.fromDate.fontSize}px Arial`;
+    ctx.font = `bold ${textPlaceholders.fromDate.fontSize}px Arial`;
     const fromDate = fromDateInput.value ? formatDate(fromDateInput.value) : textPlaceholders.fromDate.varName;
     const fromDateX = canvas.width * textPlaceholders.fromDate.x;
     const fromDateY = canvas.height * textPlaceholders.fromDate.y;
     ctx.fillText(fromDate, fromDateX, fromDateY);
 
     // Draw To Date
-    ctx.font = `${textPlaceholders.toDate.fontSize}px Arial`;
+    ctx.font = `bold ${textPlaceholders.toDate.fontSize}px Arial`;
     const toDate = toDateInput.value ? formatDate(toDateInput.value) : textPlaceholders.toDate.varName;
     const toDateX = canvas.width * textPlaceholders.toDate.x;
     const toDateY = canvas.height * textPlaceholders.toDate.y;
@@ -369,7 +369,7 @@ excelFileInput.addEventListener('change', (e) => {
 
             // Store all data rows (skip header)
             excelData = jsonData.slice(1).filter(row => row.length > 0 && row[0]);
-            
+
             if (excelData.length > 0) {
                 // Load first row into form
                 const values = excelData[0];
@@ -441,12 +441,32 @@ generateBtn.addEventListener('click', () => {
         fromDateInput.value,
         toDateInput.value
     );
-    
+
     pdf.save(filename);
     alert('PDF generated successfully!');
 });
 
-// Generate all PDFs from Excel data (combined into single multi-page PDF)
+// Template upload handler
+document.getElementById('templateUpload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                templateImage = img;
+                canvas.width = img.width;
+                canvas.height = img.height;
+                renderCertificate();
+                alert(`✅ Template changed successfully!\nSize: ${img.width}x${img.height}px`);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Generate all PDFs from Excel data (individual PDFs in a ZIP)
 document.getElementById('generateAllBtn').addEventListener('click', async () => {
     if (excelData.length === 0) {
         alert('No data loaded. Please upload an Excel file first.');
@@ -454,7 +474,7 @@ document.getElementById('generateAllBtn').addEventListener('click', async () => 
     }
 
     // Confirm before proceeding
-    const confirm = window.confirm(`Generate ${excelData.length} certificates in a single PDF file?\n\nThis will create one multi-page PDF with all certificates.`);
+    const confirm = window.confirm(`Generate ${excelData.length} individual certificates?\n\nThis will create separate PDF files compressed into a ZIP archive.`);
     if (!confirm) return;
 
     // Show progress
@@ -464,19 +484,13 @@ document.getElementById('generateAllBtn').addEventListener('click', async () => 
     progressContainer.style.display = 'block';
     document.getElementById('generateAllBtn').disabled = true;
 
-    // Create a single PDF document
+    // Create ZIP file
+    const zip = new JSZip();
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-    });
 
-    let isFirstPage = true;
-    
     for (let i = 0; i < excelData.length; i++) {
         const row = excelData[i];
-        
+
         // Update form fields with current row data
         const certNo = row[0] || '';
         const name = row[1] || '';
@@ -496,15 +510,22 @@ document.getElementById('generateAllBtn').addEventListener('click', async () => 
         // Wait a bit for canvas to update
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Add page to PDF (except for the first one which is already created)
-        if (!isFirstPage) {
-            pdf.addPage([canvas.width, canvas.height], 'landscape');
-        }
-        isFirstPage = false;
+        // Create individual PDF for this certificate
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+        });
 
-        // Convert canvas to image and add to current page
+        // Convert canvas to image and add to PDF
         const imgData = canvas.toDataURL('image/png');
         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+        // Get PDF as blob and add to ZIP
+        const pdfBlob = pdf.output('blob');
+        const sanitizedName = (name || `Certificate_${i + 1}`).replace(/[^a-z0-9]/gi, '_');
+        const sanitizedCertNo = (certNo || `cert_${i + 1}`).replace(/[^a-z0-9]/gi, '_');
+        zip.file(`${sanitizedCertNo}_${sanitizedName}.pdf`, pdfBlob);
 
         // Update progress
         const progress = ((i + 1) / excelData.length) * 100;
@@ -515,17 +536,29 @@ document.getElementById('generateAllBtn').addEventListener('click', async () => 
         await new Promise(resolve => setTimeout(resolve, 50));
     }
 
+    // Generate ZIP file
+    progressText.textContent = `Creating ZIP archive...`;
+    const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+    });
+
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const filename = `Certificates_Batch_${timestamp}_${excelData.length}certs.pdf`;
-    
-    // Save the combined PDF
-    pdf.save(filename);
+    const filename = `Certificates_Batch_${timestamp}_${excelData.length}files.zip`;
+
+    // Download ZIP file
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(zipBlob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
 
     // Hide progress and re-enable button
     progressBar.style.width = '100%';
-    progressText.textContent = `Complete! Generated ${excelData.length} certificates in one PDF.`;
-    
+    progressText.textContent = `Complete! Generated ${excelData.length} certificates in ZIP.`;
+
     setTimeout(() => {
         progressContainer.style.display = 'none';
         progressBar.style.width = '0%';
@@ -821,7 +854,7 @@ document.getElementById('toggleGrid').addEventListener('click', () => {
 document.getElementById('copyPositions').addEventListener('click', () => {
     // Manual save (already auto-saved, but provides user feedback)
     saveConfig();
-    
+
     // Show current positions in console
     console.log('Current placeholder positions:');
     for (let key in textPlaceholders) {
@@ -832,28 +865,30 @@ document.getElementById('copyPositions').addEventListener('click', () => {
             console.log(`${key}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, width=${p.width}, height=${p.height}`);
         }
     }
-    
+
     alert('✅ Configuration saved!\n\nYour placeholder positions are automatically saved.\nCheck the console for current position values.');
 });
 
 // Zoom functionality
 const updateZoom = () => {
     canvas.style.transform = `scale(${zoomLevel})`;
-    document.getElementById('zoomLevel').textContent = `${Math.round(zoomLevel * 100)}%`;
+    // Display zoom: 50% actual = 100% displayed
+    const displayZoom = Math.round((zoomLevel / 0.5) * 100);
+    document.getElementById('zoomLevel').textContent = `${displayZoom}%`;
 };
 
 document.getElementById('zoomIn').addEventListener('click', () => {
-    zoomLevel = Math.min(zoomLevel + 0.1, 3);
+    zoomLevel = Math.min(zoomLevel + 0.05, 1.5); // Max 300% displayed (1.5 actual)
     updateZoom();
 });
 
 document.getElementById('zoomOut').addEventListener('click', () => {
-    zoomLevel = Math.max(zoomLevel - 0.1, 0.3);
+    zoomLevel = Math.max(zoomLevel - 0.05, 0.15); // Min 30% displayed (0.15 actual)
     updateZoom();
 });
 
 document.getElementById('zoomReset').addEventListener('click', () => {
-    zoomLevel = 1;
+    zoomLevel = 0.5; // Reset to 100% displayed (0.5 actual)
     updateZoom();
 });
 
@@ -862,8 +897,8 @@ const canvasContainer = document.getElementById('canvasContainer');
 canvasContainer.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        zoomLevel = Math.max(0.3, Math.min(3, zoomLevel + delta));
+        const delta = e.deltaY > 0 ? -0.05 : 0.05;
+        zoomLevel = Math.max(0.15, Math.min(1.5, zoomLevel + delta));
         updateZoom();
     }
 }, { passive: false });
@@ -873,15 +908,15 @@ document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && !selectedPlaceholder) {
         if (e.key === '=' || e.key === '+') {
             e.preventDefault();
-            zoomLevel = Math.min(zoomLevel + 0.1, 3);
+            zoomLevel = Math.min(zoomLevel + 0.05, 1.5);
             updateZoom();
         } else if (e.key === '-' || e.key === '_') {
             e.preventDefault();
-            zoomLevel = Math.max(zoomLevel - 0.1, 0.3);
+            zoomLevel = Math.max(zoomLevel - 0.05, 0.15);
             updateZoom();
         } else if (e.key === '0') {
             e.preventDefault();
-            zoomLevel = 1;
+            zoomLevel = 0.5; // Reset to 100% displayed
             updateZoom();
         }
     }
@@ -890,3 +925,4 @@ document.addEventListener('keydown', (e) => {
 // Initialize
 loadConfig(); // Load configuration from config.json first
 loadTemplate();
+updateZoom(); // Initialize zoom display

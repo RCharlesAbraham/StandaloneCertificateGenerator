@@ -177,6 +177,12 @@ body {
     gap: 8px;
 }
 
+.bulk-data-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .divider {
     height: 1px;
     background: #e0e0e0;
@@ -302,6 +308,13 @@ body {
     text-align: center;
 }
 
+.zoom-divider {
+    width: 1px;
+    height: 24px;
+    background: #ddd;
+    margin: 0 5px;
+}
+
 .canvas-container {
     flex: 1;
     display: flex;
@@ -344,6 +357,7 @@ body {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -355,6 +369,7 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+
     to {
         opacity: 0;
         transform: translateY(-10px);
