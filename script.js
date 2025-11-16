@@ -269,7 +269,7 @@ const renderCertificate = () => {
 
     // Draw bounding boxes for selected placeholder
     if (selectedPlaceholder) {
-        ctx.strokeStyle = '#8b1538';
+        ctx.strokeStyle = '#67150a';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
 
@@ -310,7 +310,7 @@ const renderCertificate = () => {
 // Draw resize handle
 const drawResizeHandle = (x, y) => {
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#8b1538';
+    ctx.strokeStyle = '#67150a';
     ctx.lineWidth = 2;
     ctx.fillRect(x - 5, y - 5, 10, 10);
     ctx.strokeRect(x - 5, y - 5, 10, 10);
@@ -919,6 +919,64 @@ document.addEventListener('keydown', (e) => {
             zoomLevel = 0.5; // Reset to 100% displayed
             updateZoom();
         }
+    }
+});
+
+// Top Navigation Bar - User Menu
+const userInfo = document.getElementById('userInfo');
+const dropdownMenu = document.getElementById('dropdownMenu');
+const userName = document.getElementById('userName');
+const logoutBtn = document.getElementById('logoutBtn');
+const accountDetailsBtn = document.getElementById('accountDetails');
+
+// Display logged-in user's name
+const currentUser = sessionStorage.getItem('currentUser');
+if (currentUser) {
+    userName.textContent = currentUser;
+}
+
+// Toggle dropdown menu
+userInfo.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userInfo.classList.toggle('active');
+    dropdownMenu.classList.toggle('active');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', () => {
+    userInfo.classList.remove('active');
+    dropdownMenu.classList.remove('active');
+});
+
+// Prevent dropdown from closing when clicking inside
+dropdownMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
+
+// Account Details
+accountDetailsBtn.addEventListener('click', () => {
+    const user = sessionStorage.getItem('currentUser') || 'User';
+    const loginTime = sessionStorage.getItem('loginTime');
+    let message = `Account Details:\n\nUsername: ${user}`;
+    
+    if (loginTime) {
+        const time = new Date(loginTime).toLocaleString();
+        message += `\nLogged in: ${time}`;
+    }
+    
+    alert(message);
+    dropdownMenu.classList.remove('active');
+    userInfo.classList.remove('active');
+});
+
+// Logout
+logoutBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to logout?')) {
+        sessionStorage.removeItem('isAuthenticated');
+        sessionStorage.removeItem('currentUser');
+        sessionStorage.removeItem('loginTime');
+        alert('Logged out successfully!');
+        window.location.href = 'login.html';
     }
 });
 
