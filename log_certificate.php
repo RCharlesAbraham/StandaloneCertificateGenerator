@@ -42,7 +42,7 @@ $stmt = $conn->prepare("INSERT INTO certificate_logs (user_id, user_type, certif
 $certificate_type = 'appreciation'; // Default type
 $ip_address = $_SERVER['REMOTE_ADDR'];
 
-$stmt->bind_param("isssssssssiss", 
+$stmt->bind_param("isssssssssis", 
     $user_id, 
     $user_type, 
     $certificate_type,

@@ -59,7 +59,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_id']) {
                             </svg>
                             Email Address
                         </label>
-                        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                        <input type="email" id="email" name="email" placeholder="you@example.com" required style="width:100%; box-sizing:border-box;">
                     </div>
 
                     <div class="form-group">
@@ -70,7 +70,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_id']) {
                             </svg>
                             Password
                         </label>
-                        <input type="password" id="password" placeholder="Enter your password" required>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required style="width:100%; box-sizing:border-box;">
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
