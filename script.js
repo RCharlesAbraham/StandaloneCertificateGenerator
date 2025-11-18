@@ -1,6 +1,6 @@
-// Get DOM elements
+// Get DOM elements (with null checks for login page)
 const canvas = document.getElementById('certificateCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 const generateBtn = document.getElementById('generateBtn');
 
 // Form inputs
@@ -14,11 +14,14 @@ const sig2Input = document.getElementById('sig2');
 const sig3Input = document.getElementById('sig3');
 const excelFileInput = document.getElementById('excelFile');
 
-// Store uploaded signature images
+// Store uploaded signature images - now with layout-specific keys
 let signatures = {
-    sig1: null,
-    sig2: null,
-    sig3: null
+    sig1: null,              // Layout 1 single signature
+    sig2Left: null,          // Layout 2 left signature
+    sig2Right: null,         // Layout 2 right signature
+    sig3Left: null,          // Layout 3 left signature
+    sig3Center: null,        // Layout 3 center signature
+    sig3Right: null          // Layout 3 right signature
 };
 
 // Template image
@@ -27,6 +30,7 @@ let templateImage = null;
 // Store Excel data for batch processing
 let excelData = [];
 let currentRowIndex = 0;
+let bulkGenerationCancelled = false;
 
 // Text placeholders with draggable positions and sizes (will be loaded from localStorage or config.json)
 let textPlaceholders = {};
@@ -38,9 +42,20 @@ const loadConfig = async () => {
     if (savedConfig) {
         try {
             const config = JSON.parse(savedConfig);
-            textPlaceholders = config.textPlaceholders;
+            textPlaceholders = config.textPlaceholders || textPlaceholders;
+            // Load grouping setting if present
+            if (typeof config.groupingEnabled !== 'undefined') {
+                groupingEnabled = !!config.groupingEnabled;
+            }
             console.log('✅ Configuration loaded from localStorage');
-            renderCertificate();
+            console.log('🔍 DEBUG: Sample placeholder positions:', {
+                sig1GroupName: textPlaceholders.sig1GroupName,
+                sig1GroupDesignation: textPlaceholders.sig1GroupDesignation
+            });
+            // Don't render yet - wait for template to load
+            // Update grouping toggle UI if present
+            const groupingToggleEl = document.getElementById('groupingToggle');
+            if (groupingToggleEl) groupingToggleEl.checked = groupingEnabled;
             return;
         } catch (error) {
             console.error('❌ Error parsing localStorage config:', error);
@@ -51,11 +66,14 @@ const loadConfig = async () => {
     try {
         const response = await fetch('config.json');
         const config = await response.json();
-        textPlaceholders = config.textPlaceholders;
+        textPlaceholders = config.textPlaceholders || textPlaceholders;
+        if (typeof config.groupingEnabled !== 'undefined') {
+            groupingEnabled = !!config.groupingEnabled;
+        }
         console.log('✅ Configuration loaded from config.json');
         // Save to localStorage for future use
         saveConfig();
-        renderCertificate();
+        // Don't render yet - wait for template to load
     } catch (error) {
         console.error('❌ Error loading config.json, using default values:', error);
         // Fallback to default values if config.json is not available
@@ -65,19 +83,29 @@ const loadConfig = async () => {
             certifiedFor: { x: 0.417, y: 0.622, fontSize: 30, label: 'Certified For', varName: '{{VAR3}}', dragging: false },
             fromDate: { x: 0.734, y: 0.658, fontSize: 28, label: 'From Date', varName: '{{VAR7}}', dragging: false },
             toDate: { x: 0.891, y: 0.658, fontSize: 28, label: 'To Date', varName: '{{VAR8}}', dragging: false },
-            sig1: { x: 0.430, y: 0.800, width: 170, height: 70, label: 'Signature 1', varName: '{{VAR4}}', dragging: false },
-            sig2: { x: 0.639, y: 0.804, width: 170, height: 70, label: 'Signature 2', varName: '{{VAR5}}', dragging: false },
-            sig3: { x: 0.848, y: 0.803, width: 170, height: 70, label: 'Signature 3', varName: '{{VAR6}}', dragging: false }
+            sig1: { x: 0.430, y: 0.800, width: 170, height: 74, label: 'Signature 1', varName: '{{VAR4}}', dragging: false },
+            sig1Name: { x: 0.430, y: 0.880, fontSize: 14, label: 'Sig1 Name', varName: '{{SIG1_NAME}}', dragging: false },
+            sig1Title: { x: 0.430, y: 0.900, fontSize: 12, label: 'Sig1 Title', varName: '{{SIG1_TITLE}}', dragging: false },
+            sig1Org: { x: 0.430, y: 0.920, fontSize: 12, label: 'Sig1 Org', varName: '{{SIG1_ORG}}', dragging: false },
+            sig2: { x: 0.639, y: 0.804, width: 170, height: 74, label: 'Signature 2', varName: '{{VAR5}}', dragging: false },
+            sig2Name: { x: 0.639, y: 0.880, fontSize: 14, label: 'Sig2 Name', varName: '{{SIG2_NAME}}', dragging: false },
+            sig2Title: { x: 0.639, y: 0.900, fontSize: 12, label: 'Sig2 Title', varName: '{{SIG2_TITLE}}', dragging: false },
+            sig2Org: { x: 0.639, y: 0.920, fontSize: 12, label: 'Sig2 Org', varName: '{{SIG2_ORG}}', dragging: false },
+            sig3: { x: 0.848, y: 0.803, width: 170, height: 74, label: 'Signature 3', varName: '{{VAR6}}', dragging: false },
+            sig3Name: { x: 0.848, y: 0.880, fontSize: 14, label: 'Sig3 Name', varName: '{{SIG3_NAME}}', dragging: false },
+            sig3Title: { x: 0.848, y: 0.900, fontSize: 12, label: 'Sig3 Title', varName: '{{SIG3_TITLE}}', dragging: false },
+            sig3Org: { x: 0.848, y: 0.920, fontSize: 12, label: 'Sig3 Org', varName: '{{SIG3_ORG}}', dragging: false }
         };
         saveConfig();
-        renderCertificate();
+        // Don't render yet - wait for template to load
     }
 };
 
 // Save configuration to localStorage automatically
 const saveConfig = () => {
     const config = {
-        textPlaceholders: textPlaceholders
+        textPlaceholders: textPlaceholders,
+        groupingEnabled: !!groupingEnabled
     };
 
     localStorage.setItem('certificateConfig', JSON.stringify(config, null, 2));
@@ -125,10 +153,21 @@ const showSaveIndicator = () => {
 };
 
 let selectedPlaceholder = null;
+let selectedPlaceholders = []; // For multi-select
 let isDragging = false;
 let isResizing = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
+let lineEndpointDragging = null; // 'start', 'end', 'both', or null
+
+// Drag select variables
+let isSelectingBox = false;
+let selectBoxStart = { x: 0, y: 0 };
+let selectBoxEnd = { x: 0, y: 0 };
+let dragStarted = false; // Flag to track if drag has started (moved at least 5 pixels)
+ 
+// Grouping option for Layout 1 (persisted)
+let groupingEnabled = true;
 
 // Zoom and pan variables
 let zoomLevel = 0.5; // Default 50% actual zoom (shown as 100%)
@@ -144,24 +183,74 @@ let showGrid = false;
 
 // Load template image
 const loadTemplate = () => {
+    if (!canvas) return;
+    
     templateImage = new Image();
-    templateImage.onload = () => {
+    templateImage.onload = async () => {
         // Set canvas size to match template
         canvas.width = templateImage.width;
         canvas.height = templateImage.height;
-        renderCertificate();
+        
+        console.log('🔍 DEBUG: Canvas dimensions set to:', canvas.width, 'x', canvas.height);
+        console.log('🔍 DEBUG: Template dimensions:', templateImage.width, 'x', templateImage.height);
+        
+        // Apply zoom transform immediately
+        canvas.style.transform = `scale(${zoomLevel})`;
+        
+        // Force a reflow to ensure canvas dimensions and transform are applied
+        void canvas.offsetHeight;
+        
+        // Wait for fonts to be ready before rendering
+        try {
+            await document.fonts.ready;
+            console.log('✅ Fonts loaded');
+        } catch (e) {
+            console.log('⚠️ Font loading check failed, continuing anyway');
+        }
+        
+        // Additional reflow after fonts load
+        void canvas.offsetHeight;
+        
+        // Double render strategy: render twice to ensure everything is settled
+        requestAnimationFrame(() => {
+            console.log('🔍 DEBUG: First render pass');
+            renderCertificate();
+            
+            // Second render after a delay to ensure all CSS is applied
+            setTimeout(() => {
+                console.log('🔍 DEBUG: Second render pass, canvas size:', canvas.width, 'x', canvas.height);
+                console.log('🔍 DEBUG: Canvas getBoundingClientRect:', canvas.getBoundingClientRect());
+                console.log('🔍 DEBUG: Zoom level:', zoomLevel);
+                renderCertificate();
+            }, 100);
+        });
     };
-    templateImage.onerror = () => {
+    templateImage.onerror = async () => {
         // If template not found, create a blank certificate
         canvas.width = 1122;
         canvas.height = 794;
-        renderCertificate();
+        
+        // Force a reflow
+        void canvas.offsetHeight;
+        
+        // Wait for fonts
+        try {
+            await document.fonts.ready;
+        } catch (e) {
+            console.log('⚠️ Font loading check failed');
+        }
+        
+        requestAnimationFrame(() => {
+            renderCertificate();
+        });
     };
     templateImage.src = 'MainPlaceholderCertificate.jpg';
 };
 
 // Render certificate on canvas
 const renderCertificate = () => {
+    if (!canvas || !ctx) return;
+    
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -249,23 +338,220 @@ const renderCertificate = () => {
     const toDateY = canvas.height * textPlaceholders.toDate.y;
     ctx.fillText(toDate, toDateX, toDateY);
 
-    // Draw signatures
-    const drawSignature = (key, sigImage) => {
-        const placeholder = textPlaceholders[key];
-        const sigX = canvas.width * placeholder.x;
-        const sigY = canvas.height * placeholder.y;
+    // Draw custom text fields
+    customTextFields.forEach(fieldId => {
+        if (textPlaceholders[fieldId]) {
+            const placeholder = textPlaceholders[fieldId];
+            ctx.font = `bold ${placeholder.fontSize}px Arial`;
+            const text = getPlaceholderText(fieldId);
+            const x = canvas.width * placeholder.x;
+            const y = canvas.height * placeholder.y;
+            ctx.fillText(text, x, y);
+        }
+    });
 
-        if (sigImage) {
-            ctx.drawImage(sigImage, sigX - placeholder.width / 2, sigY - placeholder.height, placeholder.width, placeholder.height);
-        } else {
-            ctx.font = '10px Arial';
-            ctx.fillText(placeholder.varName, sigX, sigY - 10);
+    // Draw signature groups based on slider layout - each position independently movable
+    // Initialize signature group placeholders for each layout position
+    const initSignatureGroups = () => {
+        // Layout 1 - Single signature (centered)
+        if (!textPlaceholders.sig1GroupName) {
+            textPlaceholders.sig1GroupName = { x: 0.5, y: 0.85, fontSize: 27, label: 'Sig1 Name', varName: '', dragging: false };
+            textPlaceholders.sig1GroupDesignation = { x: 0.5, y: 0.89, fontSize: 22, label: 'Sig1 Designation', varName: '', dragging: false };
+            textPlaceholders.sig1GroupCollege = { x: 0.5, y: 0.93, fontSize: 22, label: 'Sig1 College', varName: '', dragging: false };
+        }
+        
+        // Layout 1 - Signature image placeholder (movable, scale-only)
+        if (!textPlaceholders.sig1Image) {
+            textPlaceholders.sig1Image = { x: 0.5, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig1 Image', dragging: false };
+        }
+        
+        // Layout 2 - Double signature (left at 25%, right at 75%)
+        if (!textPlaceholders.sig2GroupName) {
+            textPlaceholders.sig2GroupName = { x: 0.25, y: 0.85, fontSize: 27, label: 'Sig2 Name', varName: '', dragging: false };
+            textPlaceholders.sig2GroupDesignation = { x: 0.25, y: 0.89, fontSize: 22, label: 'Sig2 Designation', varName: '', dragging: false };
+            textPlaceholders.sig2GroupCollege = { x: 0.25, y: 0.93, fontSize: 22, label: 'Sig2 College', varName: '', dragging: false };
+        }
+        
+        // Layout 2 - Left signature image placeholder
+        if (!textPlaceholders.sig2LeftImage) {
+            textPlaceholders.sig2LeftImage = { x: 0.25, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig2 Left Image', dragging: false };
+        }
+        
+        // Layout 2 - Double signature second position (right at 75%)
+        if (!textPlaceholders.sig2bGroupName) {
+            textPlaceholders.sig2bGroupName = { x: 0.75, y: 0.85, fontSize: 27, label: 'Sig2b Name', varName: '', dragging: false };
+            textPlaceholders.sig2bGroupDesignation = { x: 0.75, y: 0.89, fontSize: 22, label: 'Sig2b Designation', varName: '', dragging: false };
+            textPlaceholders.sig2bGroupCollege = { x: 0.75, y: 0.93, fontSize: 22, label: 'Sig2b College', varName: '', dragging: false };
+        }
+        
+        // Layout 2 - Right signature image placeholder
+        if (!textPlaceholders.sig2RightImage) {
+            textPlaceholders.sig2RightImage = { x: 0.75, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig2 Right Image', dragging: false };
+        }
+        
+        // Layout 3 - Triple signature (left at 17%, center at 50%, right at 83%)
+        if (!textPlaceholders.sig3GroupName) {
+            textPlaceholders.sig3GroupName = { x: 0.17, y: 0.85, fontSize: 27, label: 'Sig3 Name', varName: '', dragging: false };
+            textPlaceholders.sig3GroupDesignation = { x: 0.17, y: 0.89, fontSize: 22, label: 'Sig3 Designation', varName: '', dragging: false };
+            textPlaceholders.sig3GroupCollege = { x: 0.17, y: 0.93, fontSize: 22, label: 'Sig3 College', varName: '', dragging: false };
+        }
+        
+        // Layout 3 - Left signature image placeholder
+        if (!textPlaceholders.sig3LeftImage) {
+            textPlaceholders.sig3LeftImage = { x: 0.17, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig3 Left Image', dragging: false };
+        }
+        
+        // Layout 3 - Triple signature middle position
+        if (!textPlaceholders.sig3bGroupName) {
+            textPlaceholders.sig3bGroupName = { x: 0.5, y: 0.85, fontSize: 27, label: 'Sig3b Name', varName: '', dragging: false };
+            textPlaceholders.sig3bGroupDesignation = { x: 0.5, y: 0.89, fontSize: 22, label: 'Sig3b Designation', varName: '', dragging: false };
+            textPlaceholders.sig3bGroupCollege = { x: 0.5, y: 0.93, fontSize: 22, label: 'Sig3b College', varName: '', dragging: false };
+        }
+        
+        // Layout 3 - Center signature image placeholder
+        if (!textPlaceholders.sig3CenterImage) {
+            textPlaceholders.sig3CenterImage = { x: 0.5, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig3 Center Image', dragging: false };
+        }
+        
+        // Layout 3 - Triple signature right position
+        if (!textPlaceholders.sig3cGroupName) {
+            textPlaceholders.sig3cGroupName = { x: 0.83, y: 0.85, fontSize: 27, label: 'Sig3c Name', varName: '', dragging: false };
+            textPlaceholders.sig3cGroupDesignation = { x: 0.83, y: 0.89, fontSize: 22, label: 'Sig3c Designation', varName: '', dragging: false };
+            textPlaceholders.sig3cGroupCollege = { x: 0.83, y: 0.93, fontSize: 22, label: 'Sig3c College', varName: '', dragging: false };
+        }
+        
+        // Layout 3 - Right signature image placeholder
+        if (!textPlaceholders.sig3RightImage) {
+            textPlaceholders.sig3RightImage = { x: 0.83, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Sig3 Right Image', dragging: false };
+        }
+    };
+    
+    initSignatureGroups();
+    
+    // Helper function to draw a signature group
+    const drawSignatureGroup = (nameKey, desigKey, collegeKey) => {
+        const namePlaceholder = textPlaceholders[nameKey];
+        const desigPlaceholder = textPlaceholders[desigKey];
+        const collegePlaceholder = textPlaceholders[collegeKey];
+        
+        if (!namePlaceholder || !desigPlaceholder || !collegePlaceholder) return;
+        
+        // Font sizes are stored in `textPlaceholders` and are now permanent (no UI size boxes).
+        
+        // Set text alignment to center
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Name
+        ctx.font = `bold ${namePlaceholder.fontSize}px Georgia, serif`;
+        const nameText = getPlaceholderText(nameKey);
+        ctx.fillText(nameText, canvas.width * namePlaceholder.x, canvas.height * namePlaceholder.y);
+        
+        // Designation
+        ctx.font = `${desigPlaceholder.fontSize}px Georgia, serif`;
+        const desigText = getPlaceholderText(desigKey);
+        ctx.fillText(desigText, canvas.width * desigPlaceholder.x, canvas.height * desigPlaceholder.y);
+        
+        // College
+        ctx.font = `${collegePlaceholder.fontSize}px Georgia, serif`;
+        const collegeText = getPlaceholderText(collegeKey);
+        ctx.fillText(collegeText, canvas.width * collegePlaceholder.x, canvas.height * collegePlaceholder.y);
+    };
+    
+    // Helper function to draw signature image using placeholder position and scale
+    const drawSignatureImage = (sigImage, imagePlaceholder) => {
+        if (sigImage && imagePlaceholder) {
+            const x = canvas.width * imagePlaceholder.x;
+            const y = canvas.height * imagePlaceholder.y;
+            // Base size for signature images (aspect ratio preserved)
+            const baseWidth = 120;
+            const baseHeight = 60;
+            // Apply scale from placeholder
+            const imgWidth = baseWidth * imagePlaceholder.scale;
+            const imgHeight = baseHeight * imagePlaceholder.scale;
+            ctx.drawImage(sigImage, x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
+        }
+    };
+    
+    // Draw signatures based on layout with images and text
+    if (signatureLayout === 1) {
+        // Layout 1: Single centered signature
+        drawSignatureImage(signatures.sig1, textPlaceholders.sig1Image);
+        drawSignatureGroup('sig1GroupName', 'sig1GroupDesignation', 'sig1GroupCollege');
+    } else if (signatureLayout === 2) {
+        // Layout 2: Double signatures (left and right)
+        drawSignatureImage(signatures.sig2Left, textPlaceholders.sig2LeftImage);
+        drawSignatureGroup('sig2GroupName', 'sig2GroupDesignation', 'sig2GroupCollege');
+        drawSignatureImage(signatures.sig2Right, textPlaceholders.sig2RightImage);
+        drawSignatureGroup('sig2bGroupName', 'sig2bGroupDesignation', 'sig2bGroupCollege');
+    } else if (signatureLayout === 3) {
+        // Layout 3: Triple signatures (left, center, right)
+        drawSignatureImage(signatures.sig3Left, textPlaceholders.sig3LeftImage);
+        drawSignatureGroup('sig3GroupName', 'sig3GroupDesignation', 'sig3GroupCollege');
+        drawSignatureImage(signatures.sig3Center, textPlaceholders.sig3CenterImage);
+        drawSignatureGroup('sig3bGroupName', 'sig3bGroupDesignation', 'sig3bGroupCollege');
+        drawSignatureImage(signatures.sig3Right, textPlaceholders.sig3RightImage);
+        drawSignatureGroup('sig3cGroupName', 'sig3cGroupDesignation', 'sig3cGroupCollege');
+    }
+
+    // Draw signature details (names, titles, orgs)
+    const drawSignatureDetails = (nameKey, titleKey, orgKey) => {
+        if (textPlaceholders[nameKey]) {
+            const namePlaceholder = textPlaceholders[nameKey];
+            ctx.font = `bold ${namePlaceholder.fontSize}px Arial`;
+            const nameText = getPlaceholderText(nameKey);
+            if (nameText && nameText !== namePlaceholder.varName) {
+                const nameX = canvas.width * namePlaceholder.x;
+                const nameY = canvas.height * namePlaceholder.y;
+                ctx.fillText(nameText, nameX, nameY);
+            }
+        }
+        
+        if (textPlaceholders[titleKey]) {
+            const titlePlaceholder = textPlaceholders[titleKey];
+            ctx.font = `${titlePlaceholder.fontSize}px Arial`;
+            const titleText = getPlaceholderText(titleKey);
+            if (titleText && titleText !== titlePlaceholder.varName) {
+                const titleX = canvas.width * titlePlaceholder.x;
+                const titleY = canvas.height * titlePlaceholder.y;
+                ctx.fillText(titleText, titleX, titleY);
+            }
+        }
+        
+        if (textPlaceholders[orgKey]) {
+            const orgPlaceholder = textPlaceholders[orgKey];
+            ctx.font = `${orgPlaceholder.fontSize}px Arial`;
+            const orgText = getPlaceholderText(orgKey);
+            if (orgText && orgText !== orgPlaceholder.varName) {
+                const orgX = canvas.width * orgPlaceholder.x;
+                const orgY = canvas.height * orgPlaceholder.y;
+                ctx.fillText(orgText, orgX, orgY);
+            }
         }
     };
 
-    drawSignature('sig1', signatures.sig1);
-    drawSignature('sig2', signatures.sig2);
-    drawSignature('sig3', signatures.sig3);
+    // Old signature drawing code removed - now using layout-specific signature images above
+
+    // Draw lines
+    Object.keys(textPlaceholders).forEach(key => {
+        const placeholder = textPlaceholders[key];
+        if (placeholder.type === 'line') {
+            ctx.strokeStyle = placeholder.color || '#000000';
+            ctx.lineWidth = placeholder.thickness || 2;
+            ctx.lineCap = placeholder.lineCap || 'round'; // Apply rounded caps
+            ctx.setLineDash([]);
+            
+            const x1 = canvas.width * placeholder.x1;
+            const y1 = canvas.height * placeholder.y1;
+            const x2 = canvas.width * placeholder.x2;
+            const y2 = canvas.height * placeholder.y2;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+    });
 
     // Draw bounding boxes for selected placeholder
     if (selectedPlaceholder) {
@@ -274,57 +560,206 @@ const renderCertificate = () => {
         ctx.setLineDash([5, 5]);
 
         const placeholder = textPlaceholders[selectedPlaceholder];
-        const x = canvas.width * placeholder.x;
-        const y = canvas.height * placeholder.y;
-
-        if (placeholder.fontSize) {
-            // Text placeholder - draw box around text
-            const text = getPlaceholderText(selectedPlaceholder);
-            ctx.font = `${placeholder.fontSize}px Arial`;
-            const metrics = ctx.measureText(text);
-            const width = metrics.width + 20;
-            const height = placeholder.fontSize + 10;
-
-            ctx.strokeRect(x - width / 2, y - height + 5, width, height);
-
-            // Draw corner resize handles for text
-            drawResizeHandle(x - width / 2, y - height + 5); // Top-left
-            drawResizeHandle(x + width / 2, y - height + 5); // Top-right
-            drawResizeHandle(x - width / 2, y + 5); // Bottom-left
-            drawResizeHandle(x + width / 2, y + 5); // Bottom-right
+        
+        if (placeholder.type === 'line') {
+            // Line - draw endpoint handles
+            const x1 = canvas.width * placeholder.x1;
+            const y1 = canvas.height * placeholder.y1;
+            const x2 = canvas.width * placeholder.x2;
+            const y2 = canvas.height * placeholder.y2;
+            
+            // Draw selection outline around the line
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            
+            // Draw endpoint handles
+            drawResizeHandle(x1, y1); // Start point
+            drawResizeHandle(x2, y2); // End point
+        } else if (placeholder.type === 'signatureImage') {
+            // Signature image - draw box around image (movable, not resizable)
+            const x = canvas.width * placeholder.x;
+            const y = canvas.height * placeholder.y;
+            const baseWidth = 120;
+            const baseHeight = 60;
+            const imgWidth = baseWidth * placeholder.scale;
+            const imgHeight = baseHeight * placeholder.scale;
+            
+            ctx.strokeRect(x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
+            // No resize handles for signature images
         } else {
-            // Image placeholder - draw box
-            ctx.strokeRect(x - placeholder.width / 2, y - placeholder.height, placeholder.width, placeholder.height);
+            const x = canvas.width * placeholder.x;
+            const y = canvas.height * placeholder.y;
 
-            // Draw corner resize handles for images
-            drawResizeHandle(x - placeholder.width / 2, y - placeholder.height); // Top-left
-            drawResizeHandle(x + placeholder.width / 2, y - placeholder.height); // Top-right
-            drawResizeHandle(x - placeholder.width / 2, y); // Bottom-left
-            drawResizeHandle(x + placeholder.width / 2, y); // Bottom-right
+            if (placeholder.fontSize) {
+                // Text placeholder - draw box around text
+                const text = getPlaceholderText(selectedPlaceholder);
+                ctx.font = `${placeholder.fontSize}px Arial`;
+                const metrics = ctx.measureText(text);
+                const width = metrics.width + 20;
+                const height = placeholder.fontSize + 10;
+
+                ctx.strokeRect(x - width / 2, y - height + 5, width, height);
+
+                // Draw corner resize handles for text
+                drawResizeHandle(x - width / 2, y - height + 5); // Top-left
+                drawResizeHandle(x + width / 2, y - height + 5); // Top-right
+                drawResizeHandle(x - width / 2, y + 5); // Bottom-left
+                drawResizeHandle(x + width / 2, y + 5); // Bottom-right
+            } else {
+                // Image placeholder - draw box
+                ctx.strokeRect(x - placeholder.width / 2, y - placeholder.height, placeholder.width, placeholder.height);
+
+                // Draw corner resize handles for images
+                drawResizeHandle(x - placeholder.width / 2, y - placeholder.height); // Top-left
+                drawResizeHandle(x + placeholder.width / 2, y - placeholder.height); // Top-right
+                drawResizeHandle(x - placeholder.width / 2, y); // Bottom-left
+                drawResizeHandle(x + placeholder.width / 2, y); // Bottom-right
+            }
         }
 
+        ctx.setLineDash([]);
+    }
+
+    // Draw multi-selected elements
+    if (selectedPlaceholders.length > 0) {
+        ctx.strokeStyle = '#00a8ff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+
+        selectedPlaceholders.forEach(key => {
+            const placeholder = textPlaceholders[key];
+            if (!placeholder) return;
+
+            const x = canvas.width * placeholder.x;
+            const y = canvas.height * placeholder.y;
+
+            if (placeholder.type === 'line') {
+                const x1 = canvas.width * placeholder.x1;
+                const y1 = canvas.height * placeholder.y1;
+                const x2 = canvas.width * placeholder.x2;
+                const y2 = canvas.height * placeholder.y2;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            } else if (placeholder.fontSize) {
+                const text = getPlaceholderText(key);
+                ctx.font = `${placeholder.fontSize}px Arial`;
+                const metrics = ctx.measureText(text);
+                const width = metrics.width + 20;
+                const height = placeholder.fontSize + 10;
+                ctx.strokeRect(x - width / 2, y - height + 5, width, height);
+            } else {
+                ctx.strokeRect(x - placeholder.width / 2, y - placeholder.height, placeholder.width, placeholder.height);
+            }
+        });
+
+        ctx.setLineDash([]);
+    }
+
+    // Draw selection box if active
+    if (isSelectingBox) {
+        const minX = Math.min(selectBoxStart.x, selectBoxEnd.x);
+        const maxX = Math.max(selectBoxStart.x, selectBoxEnd.x);
+        const minY = Math.min(selectBoxStart.y, selectBoxEnd.y);
+        const maxY = Math.max(selectBoxStart.y, selectBoxEnd.y);
+
+        ctx.fillStyle = 'rgba(0, 168, 255, 0.1)';
+        ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+
+        ctx.strokeStyle = '#00a8ff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
         ctx.setLineDash([]);
     }
 };
 
 // Draw resize handle
 const drawResizeHandle = (x, y) => {
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#67150a';
-    ctx.lineWidth = 2;
-    ctx.fillRect(x - 5, y - 5, 10, 10);
-    ctx.strokeRect(x - 5, y - 5, 10, 10);
+    // No-op: resize handles/size boxes disabled per user preference
+    return;
 };
 
 // Get placeholder text
 const getPlaceholderText = (key) => {
     switch (key) {
-        case 'certNo': return certNoInput.value || textPlaceholders.certNo.varName;
-        case 'name': return nameInput.value || textPlaceholders.name.varName;
-        case 'certifiedFor': return certifiedForInput.value || textPlaceholders.certifiedFor.varName;
-        case 'fromDate': return fromDateInput.value ? formatDate(fromDateInput.value) : textPlaceholders.fromDate.varName;
-        case 'toDate': return toDateInput.value ? formatDate(toDateInput.value) : textPlaceholders.toDate.varName;
-        default: return '';
+        case 'certNo': return certNoInput?.value || textPlaceholders.certNo?.varName || '';
+        case 'name': return nameInput?.value || textPlaceholders.name?.varName || '';
+        case 'certifiedFor': return certifiedForInput?.value || textPlaceholders.certifiedFor?.varName || '';
+        case 'fromDate': return fromDateInput?.value ? formatDate(fromDateInput.value) : textPlaceholders.fromDate?.varName || '';
+        case 'toDate': return toDateInput?.value ? formatDate(toDateInput.value) : textPlaceholders.toDate?.varName || '';
+        
+        // Signature group texts - Layout 1 (Single)
+        case 'sig1GroupName':
+            return document.getElementById('sig1Name')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig1GroupDesignation':
+            return document.getElementById('sig1Designation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig1GroupCollege':
+            return document.getElementById('sig1College')?.value || textPlaceholders[key]?.varName || '';
+            
+        // Layout 2 (Double) - Left
+        case 'sig2GroupName':
+            return document.getElementById('sig2LeftName')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig2GroupDesignation':
+            return document.getElementById('sig2LeftDesignation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig2GroupCollege':
+            return document.getElementById('sig2LeftCollege')?.value || textPlaceholders[key]?.varName || '';
+            
+        // Layout 2 (Double) - Right
+        case 'sig2bGroupName':
+            return document.getElementById('sig2RightName')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig2bGroupDesignation':
+            return document.getElementById('sig2RightDesignation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig2bGroupCollege':
+            return document.getElementById('sig2RightCollege')?.value || textPlaceholders[key]?.varName || '';
+            
+        // Layout 3 (Triple) - Left
+        case 'sig3GroupName':
+            return document.getElementById('sig3LeftName')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3GroupDesignation':
+            return document.getElementById('sig3LeftDesignation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3GroupCollege':
+            return document.getElementById('sig3LeftCollege')?.value || textPlaceholders[key]?.varName || '';
+            
+        // Layout 3 (Triple) - Center
+        case 'sig3bGroupName':
+            return document.getElementById('sig3CenterName')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3bGroupDesignation':
+            return document.getElementById('sig3CenterDesignation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3bGroupCollege':
+            return document.getElementById('sig3CenterCollege')?.value || textPlaceholders[key]?.varName || '';
+            
+        // Layout 3 (Triple) - Right
+        case 'sig3cGroupName':
+            return document.getElementById('sig3RightName')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3cGroupDesignation':
+            return document.getElementById('sig3RightDesignation')?.value || textPlaceholders[key]?.varName || '';
+        case 'sig3cGroupCollege':
+            return document.getElementById('sig3RightCollege')?.value || textPlaceholders[key]?.varName || '';
+        
+        // Old signature placeholders (no longer actively used, return empty or varName)
+        case 'sig1Name':
+        case 'sig1Title':
+        case 'sig1Org':
+        case 'sig2Name':
+        case 'sig2Title':
+        case 'sig2Org':
+        case 'sig3Name':
+        case 'sig3Title':
+        case 'sig3Org':
+            return textPlaceholders[key]?.varName || '';
+        default: {
+            // Handle custom text fields
+            if (key.startsWith('customText')) {
+                const input = document.getElementById(key);
+                return input ? (input.value || textPlaceholders[key]?.varName || '') : '';
+            }
+            return '';
+        }
     }
 };// Format date
 const formatDate = (dateString) => {
@@ -356,46 +791,58 @@ const handleSignatureUpload = (inputElement, signatureKey, nameSpan) => {
 };
 
 // Handle Excel upload
-excelFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        document.getElementById('excel-name').textContent = file.name;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+if (excelFileInput) {
+    excelFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            console.log('📁 Excel file selected:', file.name);
+            document.getElementById('excel-name').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    console.log('📊 Reading Excel data...');
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    console.log('✅ Excel parsed, rows:', jsonData.length);
 
-            // Store all data rows (skip header)
-            excelData = jsonData.slice(1).filter(row => row.length > 0 && row[0]);
+                    // Store all data rows (skip header)
+                    excelData = jsonData.slice(1).filter(row => row.length > 0 && row[0]);
+                    console.log('💾 Stored data rows:', excelData.length);
 
-            if (excelData.length > 0) {
-                // Load first row into form
-                const values = excelData[0];
-                currentRowIndex = 0;
+                    if (excelData.length > 0) {
+                        // Load first row into form
+                        const values = excelData[0];
+                        currentRowIndex = 0;
 
-                // Map Excel columns to form fields
-                // Expected columns: Certificate No, Name, Certified For, From Date, To Date
-                if (values[0]) certNoInput.value = values[0];
-                if (values[1]) nameInput.value = values[1];
-                if (values[2]) certifiedForInput.value = values[2];
-                if (values[3]) fromDateInput.value = formatDateForInput(values[3]);
-                if (values[4]) toDateInput.value = formatDateForInput(values[4]);
+                        // Map Excel columns to form fields
+                        // Expected columns: Certificate No, Name, Certified For, From Date, To Date
+                        if (values[0]) certNoInput.value = values[0];
+                        if (values[1]) nameInput.value = values[1];
+                        if (values[2]) certifiedForInput.value = values[2];
+                        if (values[3]) fromDateInput.value = formatDateForInput(values[3]);
+                        if (values[4]) toDateInput.value = formatDateForInput(values[4]);
 
-                renderCertificate();
+                        renderCertificate();
 
-                // Show the "Generate All PDFs" button
-                document.getElementById('generateAllBtn').style.display = 'flex';
+                        // Show the "Generate All PDFs" button
+                        document.getElementById('generateAllBtn').style.display = 'flex';
+                        console.log('✅ Generate All button shown');
 
-                alert(`Excel data loaded successfully!\nFound ${excelData.length} certificate(s) to generate.`);
-            } else {
-                alert('No data found in Excel file.');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-});
+                        showModal(`Excel data loaded successfully!\nFound ${excelData.length} certificate(s) to generate.`, 'Data Loaded', 'success');
+                    } else {
+                        showModal('No data found in Excel file.', 'No Data', 'warning');
+                    }
+                } catch (error) {
+                    console.error('❌ Error processing Excel data:', error);
+                    showModal('Error processing Excel data: ' + error.message, 'Error', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
 
 // Format date for input field (YYYY-MM-DD)
 const formatDateForInput = (excelDate) => {
@@ -433,23 +880,48 @@ const generateSinglePDF = (certNo, name, certifiedFor, fromDate, toDate) => {
 };
 
 // Generate single PDF (current form data)
-generateBtn.addEventListener('click', () => {
-    const { pdf, filename } = generateSinglePDF(
-        certNoInput.value,
-        nameInput.value,
-        certifiedForInput.value,
-        fromDateInput.value,
-        toDateInput.value
-    );
+if (generateBtn) {
+    generateBtn.addEventListener('click', async () => {
+        const certNo = certNoInput.value;
+        const name = nameInput.value;
+        const certifiedFor = certifiedForInput.value;
+        const fromDate = fromDateInput.value;
+        const toDate = toDateInput.value;
 
-    pdf.save(filename);
-    alert('PDF generated successfully!');
-});
+        const { pdf, filename } = generateSinglePDF(certNo, name, certifiedFor, fromDate, toDate);
+
+        pdf.save(filename);
+        
+        // Log to database
+        try {
+            await fetch('log_certificate.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    certificate_no: certNo,
+                    recipient_name: name,
+                    certified_for: certifiedFor,
+                    from_date: fromDate,
+                    to_date: toDate,
+                    generation_type: 'single',
+                    bulk_count: 1,
+                    template_used: templateImage ? 'custom' : 'default'
+                })
+            });
+        } catch (error) {
+            console.error('Failed to log certificate:', error);
+        }
+        
+        showModal('PDF generated successfully!', 'Success', 'success');
+    });
+}
 
 // Template upload handler
-document.getElementById('templateUpload').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
+const templateUploadBtn = document.getElementById('templateUpload');
+if (templateUploadBtn) {
+    templateUploadBtn.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
@@ -458,54 +930,104 @@ document.getElementById('templateUpload').addEventListener('change', (e) => {
                 canvas.width = img.width;
                 canvas.height = img.height;
                 renderCertificate();
-                alert(`✅ Template changed successfully!\nSize: ${img.width}x${img.height}px`);
+                showModal(`Template changed successfully!\nSize: ${img.width}x${img.height}px`, 'Template Updated', 'success');
             };
             img.src = event.target.result;
         };
-        reader.readAsDataURL(file);
-    }
-});
+            reader.readAsDataURL(file);
+        }
+    });
+}
 
 // Generate all PDFs from Excel data (individual PDFs in a ZIP)
-document.getElementById('generateAllBtn').addEventListener('click', async () => {
-    if (excelData.length === 0) {
-        alert('No data loaded. Please upload an Excel file first.');
-        return;
-    }
+const generateAllBtn = document.getElementById('generateAllBtn');
+if (generateAllBtn) {
+    generateAllBtn.addEventListener('click', async () => {
+        console.log('🎯 Generate All clicked, data rows:', excelData.length);
+        
+        if (excelData.length === 0) {
+            showModal('No data loaded. Please upload an Excel file first.', 'No Data', 'warning');
+            return;
+        }
 
-    // Confirm before proceeding
-    const confirm = window.confirm(`Generate ${excelData.length} individual certificates?\n\nThis will create separate PDF files compressed into a ZIP archive.`);
-    if (!confirm) return;
+        // Confirm before proceeding
+        const confirmed = await showModal(`Generate ${excelData.length} individual certificates?\n\nThis will create separate PDF files compressed into a ZIP archive.`, 'Confirm Generation', 'info', true);
+        if (!confirmed) {
+            console.log('❌ User cancelled generation');
+            return;
+        }
+        
+        console.log('✅ Starting bulk generation...');
 
-    // Show progress
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    progressContainer.style.display = 'block';
-    document.getElementById('generateAllBtn').disabled = true;
+        // Reset cancel flag
+        bulkGenerationCancelled = false;
 
-    // Create ZIP file
-    const zip = new JSZip();
-    const { jsPDF } = window.jspdf;
+        // Show progress modal
+        const progressModal = showProgressModal(excelData.length);
+        document.getElementById('generateAllBtn').disabled = true;
+        
+        // Track start time for ETA calculation
+        const startTime = Date.now();
 
-    for (let i = 0; i < excelData.length; i++) {
-        const row = excelData[i];
+        // Create ZIP file
+        const zip = new JSZip();
+        const { jsPDF } = window.jspdf;
 
-        // Update form fields with current row data
-        const certNo = row[0] || '';
-        const name = row[1] || '';
-        const certifiedFor = row[2] || '';
-        const fromDate = formatDateForInput(row[3]);
-        const toDate = formatDateForInput(row[4]);
+        try {
+            for (let i = 0; i < excelData.length; i++) {
+                // Check if cancelled
+                if (bulkGenerationCancelled) {
+                    console.log('❌ Bulk generation cancelled by user');
+                    hideProgressModal();
+                    document.getElementById('generateAllBtn').disabled = false;
+                    showModal('Bulk generation cancelled.', 'Cancelled', 'info');
+                    return;
+                }
 
-        certNoInput.value = certNo;
-        nameInput.value = name;
-        certifiedForInput.value = certifiedFor;
-        fromDateInput.value = fromDate;
-        toDateInput.value = toDate;
+                const row = excelData[i];
+                console.log(`📄 Processing certificate ${i + 1}/${excelData.length}:`, row[1]);
+                
+                // Update form fields with current row data
+                const certNo = row[0] || '';
+                const name = row[1] || '';
+                const certifiedFor = row[2] || '';
+                const fromDate = formatDateForInput(row[3]);
+                const toDate = formatDateForInput(row[4]);
 
-        // Render the certificate with current data
-        renderCertificate();
+                certNoInput.value = certNo;
+                nameInput.value = name;
+                certifiedForInput.value = certifiedFor;
+                fromDateInput.value = fromDate;
+                toDateInput.value = toDate;
+
+                // Update signature fields if they exist in Excel
+                // Expected columns: 5-13 for signature details (3 signatures x 3 fields each)
+                // Layout 1 (Single): columns 5, 6, 7
+                if (document.getElementById('sig1Name')) document.getElementById('sig1Name').value = row[5] || '';
+                if (document.getElementById('sig1Designation')) document.getElementById('sig1Designation').value = row[6] || '';
+                if (document.getElementById('sig1College')) document.getElementById('sig1College').value = row[7] || '';
+                
+                // Layout 2 (Double): columns 5-10
+                if (document.getElementById('sig2LeftName')) document.getElementById('sig2LeftName').value = row[5] || '';
+                if (document.getElementById('sig2LeftDesignation')) document.getElementById('sig2LeftDesignation').value = row[6] || '';
+                if (document.getElementById('sig2LeftCollege')) document.getElementById('sig2LeftCollege').value = row[7] || '';
+                if (document.getElementById('sig2RightName')) document.getElementById('sig2RightName').value = row[8] || '';
+                if (document.getElementById('sig2RightDesignation')) document.getElementById('sig2RightDesignation').value = row[9] || '';
+                if (document.getElementById('sig2RightCollege')) document.getElementById('sig2RightCollege').value = row[10] || '';
+                
+                // Layout 3 (Triple): columns 5-13
+                if (document.getElementById('sig3LeftName')) document.getElementById('sig3LeftName').value = row[5] || '';
+                if (document.getElementById('sig3LeftDesignation')) document.getElementById('sig3LeftDesignation').value = row[6] || '';
+                if (document.getElementById('sig3LeftCollege')) document.getElementById('sig3LeftCollege').value = row[7] || '';
+                if (document.getElementById('sig3CenterName')) document.getElementById('sig3CenterName').value = row[8] || '';
+                if (document.getElementById('sig3CenterDesignation')) document.getElementById('sig3CenterDesignation').value = row[9] || '';
+                if (document.getElementById('sig3CenterCollege')) document.getElementById('sig3CenterCollege').value = row[10] || '';
+                if (document.getElementById('sig3RightName')) document.getElementById('sig3RightName').value = row[11] || '';
+                if (document.getElementById('sig3RightDesignation')) document.getElementById('sig3RightDesignation').value = row[12] || '';
+                if (document.getElementById('sig3RightCollege')) document.getElementById('sig3RightCollege').value = row[13] || '';
+
+                // Render the certificate with current data
+                renderCertificate();
 
         // Wait a bit for canvas to update
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -527,57 +1049,268 @@ document.getElementById('generateAllBtn').addEventListener('click', async () => 
         const sanitizedCertNo = (certNo || `cert_${i + 1}`).replace(/[^a-z0-9]/gi, '_');
         zip.file(`${sanitizedCertNo}_${sanitizedName}.pdf`, pdfBlob);
 
-        // Update progress
-        const progress = ((i + 1) / excelData.length) * 100;
-        progressBar.style.width = `${progress}%`;
-        progressText.textContent = `Generating... ${i + 1}/${excelData.length}`;
+                // Calculate ETA
+                const elapsed = Date.now() - startTime;
+                const avgTimePerCert = elapsed / (i + 1);
+                const remaining = excelData.length - (i + 1);
+                const etaMs = avgTimePerCert * remaining;
+                const etaSeconds = Math.ceil(etaMs / 1000);
+                
+                // Update progress modal with ETA
+                updateProgressModal(i + 1, excelData.length, null, etaSeconds);
+                
+                // Small delay to ensure smooth rendering
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
 
-        // Small delay to ensure smooth rendering
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
+            // Check if cancelled before creating ZIP
+            if (bulkGenerationCancelled) {
+                console.log('❌ Bulk generation cancelled before ZIP creation');
+                hideProgressModal();
+                document.getElementById('generateAllBtn').disabled = false;
+                showModal('Bulk generation cancelled.', 'Cancelled', 'info');
+                return;
+            }
 
-    // Generate ZIP file
-    progressText.textContent = `Creating ZIP archive...`;
-    const zipBlob = await zip.generateAsync({
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 }
+            // Generate ZIP file with progress callback
+            console.log('📦 Creating ZIP archive...');
+            
+            const zipBlob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 3 } // Reduced from 6 to 3 for faster compression
+            }, (metadata) => {
+                // Update progress during ZIP creation
+                const zipProgress = Math.round(metadata.percent);
+                updateProgressModal(excelData.length, excelData.length, `Creating ZIP archive... ${zipProgress}%`, null);
+            });
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const filename = `Certificates_Batch_${timestamp}_${excelData.length}files.zip`;
+
+            // Download ZIP file
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            // Log bulk generation to database
+            try {
+                await fetch('log_certificate.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        certificate_no: 'BULK',
+                        recipient_name: `Batch of ${excelData.length}`,
+                        certified_for: 'Multiple Recipients',
+                        generation_type: 'bulk',
+                        bulk_count: excelData.length,
+                        template_used: templateImage ? 'custom' : 'default'
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to log bulk generation:', error);
+            }
+
+            // Hide progress modal
+            hideProgressModal();
+            console.log('✅ Bulk generation complete!');
+            document.getElementById('generateAllBtn').disabled = false;
+            showModal(`Successfully generated ${excelData.length} certificates!\n\nFile: ${filename}`, 'Batch Complete', 'success');
+
+        } catch (error) {
+            console.error('❌ Error during bulk generation:', error);
+            hideProgressModal();
+            document.getElementById('generateAllBtn').disabled = false;
+            showModal('Error generating certificates: ' + error.message, 'Generation Error', 'error');
+        }
     });
+}// Add event listeners for real-time updates (only on index page)
+if (certNoInput) certNoInput.addEventListener('input', renderCertificate);
+if (nameInput) nameInput.addEventListener('input', renderCertificate);
+if (certifiedForInput) certifiedForInput.addEventListener('input', renderCertificate);
+if (fromDateInput) fromDateInput.addEventListener('change', renderCertificate);
+if (toDateInput) toDateInput.addEventListener('change', renderCertificate);
 
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const filename = `Certificates_Batch_${timestamp}_${excelData.length}files.zip`;
+// Note: Signature text inputs have been removed from the UI
+// Text inputs are now only for certificate details (Name, Certified For, Dates)
 
-    // Download ZIP file
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(link.href);
+// Signature font sizes are now permanent and set via `textPlaceholders`.
+// The UI number inputs have been removed; sizes are no longer editable from the sidebar.
 
-    // Hide progress and re-enable button
-    progressBar.style.width = '100%';
-    progressText.textContent = `Complete! Generated ${excelData.length} certificates in ZIP.`;
+// Signature layout is fixed at single layout (slider removed from UI)
+let signatureLayout = 1;
 
-    setTimeout(() => {
-        progressContainer.style.display = 'none';
-        progressBar.style.width = '0%';
-        document.getElementById('generateAllBtn').disabled = false;
-        alert(`Successfully generated ${excelData.length} certificates in a single PDF file!\n\nFile: ${filename}`);
-    }, 2000);
-});
+// Old signature details listeners removed - now using layout-specific inputs above
 
-// Add event listeners for real-time updates
-certNoInput.addEventListener('input', renderCertificate);
-nameInput.addEventListener('input', renderCertificate);
-certifiedForInput.addEventListener('input', renderCertificate);
-fromDateInput.addEventListener('change', renderCertificate);
-toDateInput.addEventListener('change', renderCertificate);
+// Setup layout-specific signature uploads
+const sig1UploadInput = document.getElementById('sig1Upload');
+const sig2LeftUploadInput = document.getElementById('sig2LeftUpload');
+const sig2RightUploadInput = document.getElementById('sig2RightUpload');
+const sig3LeftUploadInput = document.getElementById('sig3LeftUpload');
+const sig3CenterUploadInput = document.getElementById('sig3CenterUpload');
+const sig3RightUploadInput = document.getElementById('sig3RightUpload');
 
-// Setup signature uploads
-handleSignatureUpload(sig1Input, 'sig1', document.getElementById('sig1-name'));
-handleSignatureUpload(sig2Input, 'sig2', document.getElementById('sig2-name'));
-handleSignatureUpload(sig3Input, 'sig3', document.getElementById('sig3-name'));
+if (sig1UploadInput) {
+    sig1UploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig1 = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig1FileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+if (sig2LeftUploadInput) {
+    sig2LeftUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig2Left = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig2LeftFileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+if (sig2RightUploadInput) {
+    sig2RightUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig2Right = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig2RightFileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+if (sig3LeftUploadInput) {
+    sig3LeftUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig3Left = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig3LeftFileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+if (sig3CenterUploadInput) {
+    sig3CenterUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig3Center = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig3CenterFileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+if (sig3RightUploadInput) {
+    sig3RightUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    signatures.sig3Right = img;
+                    renderCertificate();
+                    const fileName = document.getElementById('sig3RightFileName');
+                    if (fileName) fileName.textContent = file.name;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// Handle checkbox to use pre-loaded signature images
+const handleSignatureCheckbox = (checkboxId, signatureKey, imageName) => {
+    const checkbox = document.getElementById(checkboxId);
+    if (checkbox) {
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                const img = new Image();
+                img.onload = () => {
+                    signatures[signatureKey] = img;
+                    renderCertificate();
+                    const nameSpan = document.getElementById(`${signatureKey}-name`);
+                    if (nameSpan) {
+                        nameSpan.textContent = imageName;
+                    }
+                };
+                img.src = `signature-images/${imageName}`;
+            } else {
+                // Uncheck - remove the signature
+                delete signatures[signatureKey];
+                renderCertificate();
+                const nameSpan = document.getElementById(`${signatureKey}-name`);
+                if (nameSpan) {
+                    nameSpan.textContent = '';
+                }
+            }
+        });
+    }
+};
+
+// Map signature names based on name input field placeholders
+// sig1: Frank.png (MR.S. FRANKLIN RAJ)
+// sig2: Aarthi.png (DR. C. AARTHI RAM)
+// sig3: Wilson.png (DR.P.WILSON)
+handleSignatureCheckbox('sig1UseImage', 'sig1', 'Frank.png');
+handleSignatureCheckbox('sig2UseImage', 'sig2', 'Aarthi.png');
+handleSignatureCheckbox('sig3UseImage', 'sig3', 'Wilson.png');
+
+// Signature layout functions removed (slider UI removed from HTML)
 
 // Check if mouse is over resize handle
 const isOverResizeHandle = (mouseX, mouseY, handleX, handleY) => {
@@ -616,59 +1349,178 @@ const getResizeHandles = (key) => {
 // Canvas mouse events for dragging and resizing
 let resizeHandle = null;
 
-canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+if (canvas) {
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
 
-    // First check if clicking on resize handle of selected placeholder
-    if (selectedPlaceholder) {
-        const handles = getResizeHandles(selectedPlaceholder);
+        // First check if clicking on resize handle of selected placeholder
+        // DISABLED: Resize by mouse is disabled
+        /*
+        if (selectedPlaceholder) {
+            const handles = getResizeHandles(selectedPlaceholder);
 
-        for (let [handleName, handle] of Object.entries(handles)) {
-            if (isOverResizeHandle(mouseX, mouseY, handle.x, handle.y)) {
-                isResizing = true;
-                resizeHandle = handleName;
-                canvas.style.cursor = 'nwse-resize';
-                console.log(`Resizing ${selectedPlaceholder} from ${handleName}`);
-                return;
+            for (let [handleName, handle] of Object.entries(handles)) {
+                if (isOverResizeHandle(mouseX, mouseY, handle.x, handle.y)) {
+                    isResizing = true;
+                    resizeHandle = handleName;
+                    canvas.style.cursor = 'nwse-resize';
+                    console.log(`Resizing ${selectedPlaceholder} from ${handleName}`);
+                    return;
+                }
             }
         }
-    }
+        */
 
-    // Check if clicking on any placeholder
-    for (let key in textPlaceholders) {
-        const placeholder = textPlaceholders[key];
-        const px = canvas.width * placeholder.x;
-        const py = canvas.height * placeholder.y;
-        const dx = Math.abs(mouseX - px);
-        const dy = Math.abs(mouseY - py);
+        // Check if clicking on any placeholder
+        let foundPlaceholder = false;
+        for (let key in textPlaceholders) {
+            const placeholder = textPlaceholders[key];
+            
+            // Allow signature images to be selected and moved
+            if (placeholder.type === 'signatureImage') {
+                const px = canvas.width * placeholder.x;
+                const py = canvas.height * placeholder.y;
+                const baseWidth = 120;
+                const baseHeight = 60;
+                const imgWidth = baseWidth * placeholder.scale;
+                const imgHeight = baseHeight * placeholder.scale;
+                
+                if (mouseX >= px - imgWidth / 2 && mouseX <= px + imgWidth / 2 &&
+                    mouseY >= py - imgHeight / 2 && mouseY <= py + imgHeight / 2) {
+                    selectedPlaceholder = key;
+                    isDragging = true;
+                    dragOffsetX = mouseX - px;
+                    dragOffsetY = mouseY - py;
+                    canvas.style.cursor = 'move';
+                    renderCertificate();
+                    console.log(`Selected signature image: ${key}`);
+                    foundPlaceholder = true;
+                    break;
+                }
+            } else if (placeholder.type === 'line') {
+                // Line hit detection - check endpoints first, then line body
+                const x1 = canvas.width * placeholder.x1;
+                const y1 = canvas.height * placeholder.y1;
+                const x2 = canvas.width * placeholder.x2;
+                const y2 = canvas.height * placeholder.y2;
+                
+                // Check if clicking on start point
+                if (Math.abs(mouseX - x1) < 10 && Math.abs(mouseY - y1) < 10) {
+                    selectedPlaceholder = key;
+                    isDragging = true;
+                    dragOffsetX = 0;
+                    dragOffsetY = 0;
+                    lineEndpointDragging = 'start';
+                    canvas.style.cursor = 'move';
+                    renderCertificate();
+                    console.log(`Selected line ${key} start point`);
+                    foundPlaceholder = true;
+                    break;
+                }
+                
+                // Check if clicking on end point
+                if (Math.abs(mouseX - x2) < 10 && Math.abs(mouseY - y2) < 10) {
+                    selectedPlaceholder = key;
+                    isDragging = true;
+                    dragOffsetX = 0;
+                    dragOffsetY = 0;
+                    lineEndpointDragging = 'end';
+                    canvas.style.cursor = 'move';
+                    renderCertificate();
+                    console.log(`Selected line ${key} end point`);
+                    foundPlaceholder = true;
+                    break;
+                }
+                
+                // Check if clicking on line body (distance from point to line)
+                const lineLength = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                const distance = Math.abs((y2 - y1) * mouseX - (x2 - x1) * mouseY + x2 * y1 - y2 * x1) / lineLength;
+                
+                if (distance < 10 && mouseX >= Math.min(x1, x2) - 10 && mouseX <= Math.max(x1, x2) + 10 &&
+                    mouseY >= Math.min(y1, y2) - 10 && mouseY <= Math.max(y1, y2) + 10) {
+                    selectedPlaceholder = key;
+                    isDragging = true;
+                    dragOffsetX = mouseX - (x1 + x2) / 2;
+                    dragOffsetY = mouseY - (y1 + y2) / 2;
+                    lineEndpointDragging = 'both';
+                    canvas.style.cursor = 'move';
+                    renderCertificate();
+                    console.log(`Selected line ${key}`);
+                    foundPlaceholder = true;
+                    break;
+                }
+            } else {
+                // Regular text/image placeholder hit detection
+                const px = canvas.width * placeholder.x;
+                const py = canvas.height * placeholder.y;
+                const dx = Math.abs(mouseX - px);
+                const dy = Math.abs(mouseY - py);
 
-        // Hit detection area
-        const hitArea = 100; // pixels
-        if (dx < hitArea && dy < hitArea) {
-            selectedPlaceholder = key;
-            isDragging = true;
-            dragOffsetX = mouseX - px;
-            dragOffsetY = mouseY - py;
-            canvas.style.cursor = 'move';
-            renderCertificate();
-            console.log(`Selected: ${key}`);
-            break;
+                // Dynamic hit detection area based on element type
+                let hitArea = 100; // default for images
+                if (placeholder.fontSize) {
+                    // For text, scale hit area based on font size
+                    hitArea = Math.max(50, placeholder.fontSize * 3);
+                }
+                
+                if (dx < hitArea && dy < hitArea) {
+                    selectedPlaceholder = key;
+                    isDragging = true;
+                    dragOffsetX = mouseX - px;
+                    dragOffsetY = mouseY - py;
+                    lineEndpointDragging = null;
+                    canvas.style.cursor = 'move';
+                    renderCertificate();
+                    console.log(`Selected: ${key}`);
+                    foundPlaceholder = true;
+                    break;
+                }
+            }
         }
-    }
-});
+        
+        // If no placeholder found, prepare for drag selection box
+        if (!foundPlaceholder) {
+            selectedPlaceholder = null;
+            selectedPlaceholders = [];
+            dragStarted = false; // Reset drag started flag
+            selectBoxStart = { x: mouseX, y: mouseY };
+            selectBoxEnd = { x: mouseX, y: mouseY };
+            // Don't change cursor yet - wait for actual drag
+            renderCertificate();
+        }
+    });
 
-canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
 
-    if (isResizing && selectedPlaceholder && resizeHandle) {
+        // Check if we should start drag selection (moved at least 15 pixels from start)
+        if (!isSelectingBox && !dragStarted && (selectBoxStart.x > 0 || selectBoxStart.y > 0)) {
+            const dx = Math.abs(mouseX - selectBoxStart.x);
+            const dy = Math.abs(mouseY - selectBoxStart.y);
+            if (dx > 15 || dy > 15) {
+                dragStarted = true;
+                isSelectingBox = true;
+                canvas.style.cursor = 'crosshair';
+                console.log('🔷 Drag selection started');
+            }
+        }
+
+        if (isSelectingBox) {
+            // Update selection box end point
+            selectBoxEnd = { x: mouseX, y: mouseY };
+            renderCertificate();
+            return;
+        }
+
+        if (isResizing && selectedPlaceholder && resizeHandle) {
         const placeholder = textPlaceholders[selectedPlaceholder];
 
         if (placeholder.fontSize) {
@@ -690,84 +1542,209 @@ canvas.addEventListener('mousemove', (e) => {
         }
         renderCertificate();
     } else if (isDragging && selectedPlaceholder) {
-        const newX = (mouseX - dragOffsetX) / canvas.width;
-        const newY = (mouseY - dragOffsetY) / canvas.height;
+        const placeholder = textPlaceholders[selectedPlaceholder];
+        
+        if (placeholder.type === 'signatureImage') {
+            // Move signature image - no resizing, just position
+            const newX = (mouseX - dragOffsetX) / canvas.width;
+            const newY = (mouseY - dragOffsetY) / canvas.height;
+            placeholder.x = Math.max(0, Math.min(1, newX));
+            placeholder.y = Math.max(0, Math.min(1, newY));
+            renderCertificate();
+            console.log(`${selectedPlaceholder}: x=${placeholder.x.toFixed(3)}, y=${placeholder.y.toFixed(3)}`);
+        } else if (placeholder.type === 'line') {
+            // Handle line dragging
+            const newX = mouseX / canvas.width;
+            const newY = mouseY / canvas.height;
+            
+            if (lineEndpointDragging === 'start') {
+                // Move start point
+                placeholder.x1 = Math.max(0, Math.min(1, newX));
+                placeholder.y1 = Math.max(0, Math.min(1, newY));
+            } else if (lineEndpointDragging === 'end') {
+                // Move end point
+                placeholder.x2 = Math.max(0, Math.min(1, newX));
+                placeholder.y2 = Math.max(0, Math.min(1, newY));
+            } else if (lineEndpointDragging === 'both') {
+                // Move entire line
+                const centerX = (placeholder.x1 + placeholder.x2) / 2;
+                const centerY = (placeholder.y1 + placeholder.y2) / 2;
+                const targetX = (mouseX - dragOffsetX) / canvas.width;
+                const targetY = (mouseY - dragOffsetY) / canvas.height;
+                const deltaX = targetX - centerX;
+                const deltaY = targetY - centerY;
+                
+                placeholder.x1 = Math.max(0, Math.min(1, placeholder.x1 + deltaX));
+                placeholder.y1 = Math.max(0, Math.min(1, placeholder.y1 + deltaY));
+                placeholder.x2 = Math.max(0, Math.min(1, placeholder.x2 + deltaX));
+                placeholder.y2 = Math.max(0, Math.min(1, placeholder.y2 + deltaY));
+            }
+        } else {
+            const newX = (mouseX - dragOffsetX) / canvas.width;
+            const newY = (mouseY - dragOffsetY) / canvas.height;
 
-        textPlaceholders[selectedPlaceholder].x = Math.max(0, Math.min(1, newX));
-        textPlaceholders[selectedPlaceholder].y = Math.max(0, Math.min(1, newY));
+            // Always move the entire signature text group (name/designation/college)
+            // for the active layout when any of that group's placeholders is dragged.
+            const layoutGroups = {
+                1: [
+                    ['sig1GroupName', 'sig1GroupDesignation', 'sig1GroupCollege']
+                ],
+                2: [
+                    ['sig2GroupName', 'sig2GroupDesignation', 'sig2GroupCollege'],
+                    ['sig2bGroupName', 'sig2bGroupDesignation', 'sig2bGroupCollege']
+                ],
+                3: [
+                    ['sig3GroupName', 'sig3GroupDesignation', 'sig3GroupCollege'],
+                    ['sig3bGroupName', 'sig3bGroupDesignation', 'sig3bGroupCollege'],
+                    ['sig3cGroupName', 'sig3cGroupDesignation', 'sig3cGroupCollege']
+                ]
+            };
+
+            let movedGroup = false;
+            if (layoutGroups[signatureLayout]) {
+                const groups = layoutGroups[signatureLayout];
+                for (let grp of groups) {
+                    if (grp.includes(selectedPlaceholder)) {
+                        const deltaX = newX - textPlaceholders[selectedPlaceholder].x;
+                        const deltaY = newY - textPlaceholders[selectedPlaceholder].y;
+
+                        grp.forEach(key => {
+                            if (textPlaceholders[key]) {
+                                textPlaceholders[key].x = Math.max(0, Math.min(1, textPlaceholders[key].x + deltaX));
+                                textPlaceholders[key].y = Math.max(0, Math.min(1, textPlaceholders[key].y + deltaY));
+                            }
+                        });
+
+                        movedGroup = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!movedGroup) {
+                // Non-signature items move independently
+                textPlaceholders[selectedPlaceholder].x = Math.max(0, Math.min(1, newX));
+                textPlaceholders[selectedPlaceholder].y = Math.max(0, Math.min(1, newY));
+            }
+        }
+        
         renderCertificate();
 
         // Log position for debugging
         console.log(`${selectedPlaceholder}: x=${textPlaceholders[selectedPlaceholder].x.toFixed(3)}, y=${textPlaceholders[selectedPlaceholder].y.toFixed(3)}`);
     } else {
-        // Check if hovering over resize handles
-        let overHandle = false;
-        if (selectedPlaceholder) {
-            const handles = getResizeHandles(selectedPlaceholder);
-            for (let [handleName, handle] of Object.entries(handles)) {
-                if (isOverResizeHandle(mouseX, mouseY, handle.x, handle.y)) {
-                    overHandle = true;
-                    canvas.style.cursor = 'nwse-resize';
-                    break;
+            // Check if hovering over resize handles - DISABLED
+            let overHandle = false;
+            /*
+            if (selectedPlaceholder) {
+                const handles = getResizeHandles(selectedPlaceholder);
+                for (let [handleName, handle] of Object.entries(handles)) {
+                    if (isOverResizeHandle(mouseX, mouseY, handle.x, handle.y)) {
+                        overHandle = true;
+                        canvas.style.cursor = 'nwse-resize';
+                        break;
+                    }
                 }
             }
-        }
+            */
 
-        if (!overHandle) {
-            // Check if hovering over any placeholder
-            let hovering = false;
+            if (!overHandle) {
+                // Check if hovering over any placeholder
+                let hovering = false;
+                for (let key in textPlaceholders) {
+                    const placeholder = textPlaceholders[key];
+                    const px = canvas.width * placeholder.x;
+                    const py = canvas.height * placeholder.y;
+                    const dx = Math.abs(mouseX - px);
+                    const dy = Math.abs(mouseY - py);
+
+                    // Dynamic hit detection area based on element type
+                    let hitArea = 100; // default for images
+                    if (placeholder.fontSize) {
+                        // For text, scale hit area based on font size
+                        hitArea = Math.max(50, placeholder.fontSize * 3);
+                    }
+                    
+                    if (dx < hitArea && dy < hitArea) {
+                        hovering = true;
+                        break;
+                    }
+                }
+                canvas.style.cursor = hovering ? 'pointer' : 'default';
+            }
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        if (isSelectingBox) {
+            // Finalize selection box and find all elements inside
+            const minX = Math.min(selectBoxStart.x, selectBoxEnd.x);
+            const maxX = Math.max(selectBoxStart.x, selectBoxEnd.x);
+            const minY = Math.min(selectBoxStart.y, selectBoxEnd.y);
+            const maxY = Math.max(selectBoxStart.y, selectBoxEnd.y);
+
+            selectedPlaceholders = [];
+            
             for (let key in textPlaceholders) {
                 const placeholder = textPlaceholders[key];
                 const px = canvas.width * placeholder.x;
                 const py = canvas.height * placeholder.y;
-                const dx = Math.abs(mouseX - px);
-                const dy = Math.abs(mouseY - py);
 
-                const hitArea = 100;
-                if (dx < hitArea && dy < hitArea) {
-                    hovering = true;
-                    break;
+                // Check if element is inside selection box
+                if (px >= minX && px <= maxX && py >= minY && py <= maxY) {
+                    selectedPlaceholders.push(key);
                 }
             }
-            canvas.style.cursor = hovering ? 'pointer' : 'default';
+
+            isSelectingBox = false;
+            dragStarted = false;
+            selectBoxStart = { x: 0, y: 0 }; // Reset selection box start
+            selectBoxEnd = { x: 0, y: 0 }; // Reset selection box end
+            canvas.style.cursor = 'default';
+            console.log(`✅ Selected ${selectedPlaceholders.length} elements: ${selectedPlaceholders.join(', ')}`);
+            renderCertificate();
+            return;
         }
-    }
-});
 
-canvas.addEventListener('mouseup', () => {
-    if (isDragging || isResizing) {
-        isDragging = false;
-        isResizing = false;
-        resizeHandle = null;
-        canvas.style.cursor = 'default';
+        // Reset drag selection variables
+        dragStarted = false;
+        isSelectingBox = false;
+        selectBoxStart = { x: 0, y: 0 }; // Reset on every mouseup
+        selectBoxEnd = { x: 0, y: 0 };
 
-        // Log final position/size
-        if (selectedPlaceholder) {
-            const p = textPlaceholders[selectedPlaceholder];
-            if (p.fontSize) {
-                console.log(`✅ Final ${selectedPlaceholder}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, fontSize=${p.fontSize}`);
-            } else {
-                console.log(`✅ Final ${selectedPlaceholder}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, width=${p.width}, height=${p.height}`);
+        if (isDragging || isResizing) {
+            isDragging = false;
+            isResizing = false;
+            resizeHandle = null;
+            lineEndpointDragging = null;
+            canvas.style.cursor = 'default';
+
+            // Log final position/size
+            if (selectedPlaceholder) {
+                const p = textPlaceholders[selectedPlaceholder];
+                if (p.type === 'line') {
+                    console.log(`✅ Final ${selectedPlaceholder}: x1=${p.x1.toFixed(3)}, y1=${p.y1.toFixed(3)}, x2=${p.x2.toFixed(3)}, y2=${p.y2.toFixed(3)}`);
+                } else if (p.fontSize) {
+                    console.log(`✅ Final ${selectedPlaceholder}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, fontSize=${p.fontSize}`);
+                } else {
+                    console.log(`✅ Final ${selectedPlaceholder}: x=${p.x.toFixed(3)}, y=${p.y.toFixed(3)}, width=${p.width}, height=${p.height}`);
+                }
             }
-        }
 
-        // Auto-save configuration after any change
-        saveConfig();
-    }
-}); canvas.addEventListener('dblclick', (e) => {
+            // Auto-save configuration after any change
+            saveConfig();
+        }
+    });
+
+    canvas.addEventListener('dblclick', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) / canvas.width;
     const mouseY = (e.clientY - rect.top) / canvas.height;
 
-    // Double click to resize text
+    // Double click handler
+    // Font sizes are permanent and cannot be changed via double-click when size boxes are removed.
     if (selectedPlaceholder && textPlaceholders[selectedPlaceholder].fontSize) {
-        const newSize = prompt(`Enter font size for ${textPlaceholders[selectedPlaceholder].label}:`, textPlaceholders[selectedPlaceholder].fontSize);
-        if (newSize && !isNaN(newSize)) {
-            textPlaceholders[selectedPlaceholder].fontSize = parseInt(newSize);
-            renderCertificate();
-            console.log(`${selectedPlaceholder} fontSize: ${newSize}`);
-            saveConfig(); // Auto-save
-        }
+        showModal('Font sizes are fixed and cannot be changed from the UI.\nUse the configuration file to change default sizes.', 'Info', 'info');
     } else if (selectedPlaceholder) {
         const newWidth = prompt(`Enter width for ${textPlaceholders[selectedPlaceholder].label}:`, textPlaceholders[selectedPlaceholder].width);
         const newHeight = prompt(`Enter height for ${textPlaceholders[selectedPlaceholder].label}:`, textPlaceholders[selectedPlaceholder].height);
@@ -776,13 +1753,20 @@ canvas.addEventListener('mouseup', () => {
             textPlaceholders[selectedPlaceholder].height = parseInt(newHeight);
             renderCertificate();
             console.log(`${selectedPlaceholder} size: ${newWidth}x${newHeight}`);
-            saveConfig(); // Auto-save
+                saveConfig(); // Auto-save
+            }
         }
-    }
-});
+    });
+}
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    // Don't intercept keyboard shortcuts when typing in input fields
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+    }
+    
     if (!selectedPlaceholder) return;
 
     const step = e.shiftKey ? 0.001 : 0.005;
@@ -790,33 +1774,74 @@ document.addEventListener('keydown', (e) => {
     let configChanged = false;
 
     switch (e.key) {
+        case 'Delete':
+        case 'Backspace':
+            console.log('Delete key pressed. Selected:', selectedPlaceholder);
+            // Only allow deletion of lines and custom text fields
+            const isLineType = textPlaceholders[selectedPlaceholder]?.type === 'line';
+            const isCustomText = selectedPlaceholder && selectedPlaceholder.startsWith('customText');
+            
+            if (selectedPlaceholder && (isLineType || isCustomText)) {
+                console.log('Deleting:', selectedPlaceholder);
+                const placeholderLabel = textPlaceholders[selectedPlaceholder].label || selectedPlaceholder;
+                
+                // Delete the placeholder
+                delete textPlaceholders[selectedPlaceholder];
+                
+                // Remove from custom text fields array if applicable
+                if (selectedPlaceholder.startsWith('customText')) {
+                    customTextFields = customTextFields.filter(id => id !== selectedPlaceholder);
+                    const formGroup = document.getElementById(`${selectedPlaceholder}-group`);
+                    if (formGroup) formGroup.remove();
+                    
+                    // Hide container if no custom fields
+                    if (customTextFields.length === 0) {
+                        customTextsContainer.style.display = 'none';
+                    }
+                }
+                
+                // Deselect and re-render
+                selectedPlaceholder = null;
+                renderCertificate();
+                saveConfig();
+                
+                showModal(`${placeholderLabel} deleted successfully.`, 'Item Deleted', 'success');
+                e.preventDefault();
+            } else {
+                console.log('Cannot delete - either nothing selected or not a line/custom text');
+            }
+            break;
+        case 'Escape':
+            selectedPlaceholder = null;
+            renderCertificate();
+            break;
         case 'ArrowLeft':
+            if (placeholder.type === 'line') break; // Skip for lines
             placeholder.x -= step;
             renderCertificate();
             configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowRight':
+            if (placeholder.type === 'line') break; // Skip for lines
             placeholder.x += step;
             renderCertificate();
             configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowUp':
+            if (placeholder.type === 'line') break; // Skip for lines
             placeholder.y -= step;
             renderCertificate();
             configChanged = true;
             e.preventDefault();
             break;
         case 'ArrowDown':
+            if (placeholder.type === 'line') break; // Skip for lines
             placeholder.y += step;
             renderCertificate();
             configChanged = true;
             e.preventDefault();
-            break;
-        case 'Escape':
-            selectedPlaceholder = null;
-            renderCertificate();
             break;
         case '+':
         case '=':
@@ -845,13 +1870,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Calibration tools
-document.getElementById('toggleGrid').addEventListener('click', () => {
-    showGrid = !showGrid;
-    renderCertificate();
-    console.log(`Grid ${showGrid ? 'enabled' : 'disabled'}`);
-});
+const toggleGridBtn = document.getElementById('toggleGrid');
+const copyPositionsBtn = document.getElementById('copyPositions');
 
-document.getElementById('copyPositions').addEventListener('click', () => {
+if (toggleGridBtn) {
+    toggleGridBtn.addEventListener('click', () => {
+        showGrid = !showGrid;
+        renderCertificate();
+        console.log(`Grid ${showGrid ? 'enabled' : 'disabled'}`);
+    });
+}
+
+if (copyPositionsBtn) {
+    copyPositionsBtn.addEventListener('click', () => {
     // Manual save (already auto-saved, but provides user feedback)
     saveConfig();
 
@@ -866,45 +1897,67 @@ document.getElementById('copyPositions').addEventListener('click', () => {
         }
     }
 
-    alert('✅ Configuration saved!\n\nYour placeholder positions are automatically saved.\nCheck the console for current position values.');
-});
+        showModal('Configuration saved!\n\nYour placeholder positions are automatically saved.\nCheck the console for current position values.', 'Configuration Saved', 'success');
+    });
+}
 
 // Zoom functionality
 const updateZoom = () => {
-    canvas.style.transform = `scale(${zoomLevel})`;
-    // Display zoom: 50% actual = 100% displayed
-    const displayZoom = Math.round((zoomLevel / 0.5) * 100);
-    document.getElementById('zoomLevel').textContent = `${displayZoom}%`;
+    const zoomLevelEl = document.getElementById('zoomLevel');
+    if (canvas && zoomLevelEl) {
+        canvas.style.transform = `scale(${zoomLevel})`;
+        // Display zoom: 50% actual = 100% displayed
+        const displayZoom = Math.round((zoomLevel / 0.5) * 100);
+        zoomLevelEl.textContent = `${displayZoom}%`;
+    }
 };
 
-document.getElementById('zoomIn').addEventListener('click', () => {
-    zoomLevel = Math.min(zoomLevel + 0.05, 1.5); // Max 300% displayed (1.5 actual)
-    updateZoom();
-});
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomOutBtn = document.getElementById('zoomOut');
+const zoomResetBtn = document.getElementById('zoomReset');
 
-document.getElementById('zoomOut').addEventListener('click', () => {
-    zoomLevel = Math.max(zoomLevel - 0.05, 0.15); // Min 30% displayed (0.15 actual)
-    updateZoom();
-});
+if (zoomInBtn) {
+    zoomInBtn.addEventListener('click', () => {
+        zoomLevel = Math.min(zoomLevel + 0.05, 1.5); // Max 300% displayed (1.5 actual)
+        updateZoom();
+    });
+}
 
-document.getElementById('zoomReset').addEventListener('click', () => {
-    zoomLevel = 0.5; // Reset to 100% displayed (0.5 actual)
-    updateZoom();
-});
+if (zoomOutBtn) {
+    zoomOutBtn.addEventListener('click', () => {
+        zoomLevel = Math.max(zoomLevel - 0.05, 0.15); // Min 30% displayed (0.15 actual)
+        updateZoom();
+    });
+}
+
+if (zoomResetBtn) {
+    zoomResetBtn.addEventListener('click', () => {
+        zoomLevel = 0.5; // Reset to 100% displayed (0.5 actual)
+        updateZoom();
+    });
+}
 
 // Mouse wheel zoom
 const canvasContainer = document.getElementById('canvasContainer');
-canvasContainer.addEventListener('wheel', (e) => {
+if (canvasContainer) {
+    canvasContainer.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -0.05 : 0.05;
         zoomLevel = Math.max(0.15, Math.min(1.5, zoomLevel + delta));
-        updateZoom();
-    }
-}, { passive: false });
+            updateZoom();
+        }
+    }, { passive: false });
+}
 
 // Keyboard zoom shortcuts
 document.addEventListener('keydown', (e) => {
+    // Don't intercept when typing in input fields
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        return;
+    }
+    
     if ((e.ctrlKey || e.metaKey) && !selectedPlaceholder) {
         if (e.key === '=' || e.key === '+') {
             e.preventDefault();
@@ -922,65 +1975,520 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Top Navigation Bar - User Menu
+// Modal Notification System
+const notificationModal = document.getElementById('notificationModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalMessage = document.getElementById('modalMessage');
+const modalIcon = document.getElementById('modalIcon');
+const modalOk = document.getElementById('modalOk');
+const modalCancel = document.getElementById('modalCancel');
+const modalClose = document.getElementById('modalClose');
+
+let modalResolve = null;
+
+const showModal = (message, title = 'Notification', type = 'info', showCancel = false) => {
+    return new Promise((resolve) => {
+        if (!notificationModal || !modalTitle || !modalMessage || !modalIcon || !modalOk) {
+            console.error('Modal elements not found');
+            resolve(true);
+            return;
+        }
+        
+        modalResolve = resolve;
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        
+        // Reset header class
+        const header = document.querySelector('.modal-header');
+        if (!header) {
+            resolve(true);
+            return;
+        }
+        header.className = 'modal-header';
+        
+        // Set icon based on type
+        if (type === 'success') {
+            header.classList.add('success');
+            modalIcon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path>';
+        } else if (type === 'error') {
+            header.classList.add('error');
+            modalIcon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>';
+        } else if (type === 'warning') {
+            header.classList.add('warning');
+            modalIcon.innerHTML = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>';
+        } else {
+            modalIcon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>';
+        }
+        
+        // Show/hide cancel button
+        if (modalCancel) {
+            if (showCancel) {
+                modalCancel.style.display = 'inline-flex';
+            } else {
+                modalCancel.style.display = 'none';
+            }
+        }
+        
+        notificationModal.classList.add('show');
+    });
+};
+
+const hideModal = (result = true) => {
+    if (notificationModal) {
+        notificationModal.classList.remove('show');
+    }
+    if (modalResolve) {
+        modalResolve(result);
+        modalResolve = null;
+    }
+};
+
+if (modalOk) modalOk.addEventListener('click', () => hideModal(true));
+if (modalCancel) modalCancel.addEventListener('click', () => hideModal(false));
+if (modalClose) modalClose.addEventListener('click', () => hideModal(false));
+
+// Close modal when clicking outside
+if (notificationModal) {
+    notificationModal.addEventListener('click', (e) => {
+        if (e.target === notificationModal) {
+            hideModal(false);
+        }
+    });
+}
+
+// Progress Modal for Bulk Generation
+let progressModalElement = null;
+
+const showProgressModal = (totalCount) => {
+    // Remove existing modal if present
+    if (progressModalElement) {
+        progressModalElement.remove();
+        progressModalElement = null;
+    }
+    
+    // Create new progress modal
+    progressModalElement = document.createElement('div');
+    progressModalElement.className = 'modal show';
+    progressModalElement.style.cssText = 'display: flex !important; z-index: 10001;';
+    progressModalElement.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="background: #00a8ff; color: white;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <h3>Generating Certificates</h3>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <div id="progressModalContent">
+                    <p id="progressModalText" style="margin-bottom: 8px; font-size: 14px; color: #444;">
+                        Generating certificate 0 of ${totalCount}...
+                    </p>
+                    <p id="progressModalETA" style="margin-bottom: 16px; font-size: 12px; color: #666;">
+                        Estimated time remaining: Calculating...
+                    </p>
+                    <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-bottom: 16px;">
+                        <div id="progressModalBar" style="width: 0%; height: 100%; background: #00a8ff; transition: width 0.3s;"></div>
+                    </div>
+                    <p id="progressModalPercent" style="text-align: center; font-weight: 600; color: #00a8ff; font-size: 18px;">0%</p>
+                </div>
+                <div id="progressModalConfirm" style="display: none;">
+                    <p style="margin-bottom: 16px; font-size: 14px; color: #444; text-align: center;">
+                        Are you sure you want to cancel?<br>
+                        <span style="font-size: 12px; color: #666;">Progress will be lost.</span>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="progressModalCancel" class="btn btn-secondary">Cancel</button>
+                <button id="progressModalConfirmYes" class="btn btn-primary" style="display: none;">Yes, Cancel</button>
+                <button id="progressModalConfirmNo" class="btn btn-secondary" style="display: none;">No, Continue</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(progressModalElement);
+
+    // Add button handlers
+    setTimeout(() => {
+        const cancelBtn = document.getElementById('progressModalCancel');
+        const confirmYesBtn = document.getElementById('progressModalConfirmYes');
+        const confirmNoBtn = document.getElementById('progressModalConfirmNo');
+        const progressContent = document.getElementById('progressModalContent');
+        const confirmContent = document.getElementById('progressModalConfirm');
+        
+        if (cancelBtn) {
+            cancelBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Show confirmation in same modal
+                progressContent.style.display = 'none';
+                confirmContent.style.display = 'block';
+                cancelBtn.style.display = 'none';
+                confirmYesBtn.style.display = 'inline-block';
+                confirmNoBtn.style.display = 'inline-block';
+            };
+        }
+        
+        if (confirmYesBtn) {
+            confirmYesBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                bulkGenerationCancelled = true;
+                console.log('🛑 User confirmed cancellation');
+            };
+        }
+        
+        if (confirmNoBtn) {
+            confirmNoBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Return to progress view
+                progressContent.style.display = 'block';
+                confirmContent.style.display = 'none';
+                cancelBtn.style.display = 'inline-block';
+                confirmYesBtn.style.display = 'none';
+                confirmNoBtn.style.display = 'none';
+            };
+        }
+    }, 100);
+    
+    return progressModalElement;
+};
+
+const updateProgressModal = (current, total, customMessage = null, etaSeconds = null) => {
+    const textEl = document.getElementById('progressModalText');
+    const barEl = document.getElementById('progressModalBar');
+    const percentEl = document.getElementById('progressModalPercent');
+    const etaEl = document.getElementById('progressModalETA');
+    
+    const progress = Math.round((current / total) * 100);
+    
+    if (textEl) {
+        textEl.textContent = customMessage || `Generating certificate ${current} of ${total}...`;
+    }
+    if (barEl) {
+        barEl.style.width = `${progress}%`;
+    }
+    if (percentEl) {
+        percentEl.textContent = `${progress}%`;
+    }
+    if (etaEl && etaSeconds !== null) {
+        if (etaSeconds > 60) {
+            const minutes = Math.floor(etaSeconds / 60);
+            const seconds = etaSeconds % 60;
+            etaEl.textContent = `Estimated time remaining: ${minutes}m ${seconds}s`;
+        } else if (etaSeconds > 0) {
+            etaEl.textContent = `Estimated time remaining: ${etaSeconds}s`;
+        } else {
+            etaEl.textContent = 'Almost done...';
+        }
+    } else if (etaEl && customMessage) {
+        etaEl.textContent = '';
+    }
+};
+
+const hideProgressModal = () => {
+    if (progressModalElement) {
+        progressModalElement.style.display = 'none';
+    }
+};
+
+// Signature management
+let activeSignatures = 1; // Start with 1 signature
+const maxSignatures = 3;
+const addSignatureBtn = document.getElementById('addSignatureBtn');
+
+// Add signature function
+if (addSignatureBtn) {
+    addSignatureBtn.addEventListener('click', () => {
+    if (activeSignatures < maxSignatures) {
+        activeSignatures++;
+        document.getElementById(`sig${activeSignatures}Section`).style.display = 'block';
+        
+        if (activeSignatures === maxSignatures) {
+            addSignatureBtn.style.display = 'none';
+        }
+        
+            renderCertificate();
+            showModal(`Signature ${activeSignatures} section added!`, 'Signature Added', 'success');
+        }
+    });
+}
+
+// Remove signature function (global so it can be called from HTML)
+window.removeSignature = (sigNum) => {
+    const section = document.getElementById(`sig${sigNum}Section`);
+    section.style.display = 'none';
+    
+    // Clear the inputs
+    document.getElementById(`sig${sigNum}`).value = '';
+    document.getElementById(`sig${sigNum}-name`).textContent = '';
+    document.getElementById(`sig${sigNum}Name`).value = '';
+    document.getElementById(`sig${sigNum}Title`).value = '';
+    document.getElementById(`sig${sigNum}Org`).value = '';
+    
+    // Clear signature image
+    signatures[`sig${sigNum}`] = null;
+    
+    // Update active count
+    activeSignatures = Math.max(1, activeSignatures - 1);
+    
+    // Show add button if under max
+    if (activeSignatures < maxSignatures) {
+        addSignatureBtn.style.display = 'flex';
+    }
+    
+    renderCertificate();
+    showModal(`Signature ${sigNum} removed.`, 'Signature Removed', 'info');
+};
+
+// Custom text fields management
+let customTextFields = [];
+let customTextCounter = 0;
+const insertTextBtn = document.getElementById('insertTextBtn');
+const customTextsContainer = document.getElementById('customTextsContainer');
+
+// Add new custom text field
+if (insertTextBtn && customTextsContainer) {
+    insertTextBtn.addEventListener('click', () => {
+    customTextCounter++;
+    const fieldId = `customText${customTextCounter}`;
+    
+    // Add to textPlaceholders with default position
+    textPlaceholders[fieldId] = {
+        x: 0.5,
+        y: 0.5 + (customTextCounter * 0.05),
+        fontSize: 24,
+        label: `Custom Text ${customTextCounter}`,
+        varName: `{{CUSTOM${customTextCounter}}}`,
+        dragging: false
+    };
+    
+    // Create form group
+    const formGroup = document.createElement('div');
+    formGroup.className = 'form-group';
+    formGroup.id = `${fieldId}-group`;
+    formGroup.innerHTML = `
+        <label for="${fieldId}" style="display:flex; align-items:center; gap:6px; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                    <line x1="9" y1="20" x2="15" y2="20"></line>
+                    <line x1="12" y1="4" x2="12" y2="20"></line>
+                </svg>
+                Custom Text ${customTextCounter}
+            </span>
+            <button type="button" class="remove-text-btn" data-field="${fieldId}" title="Remove" style="background:#dc3545; color:white; border:none; border-radius:4px; width:24px; height:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </label>
+        <input type="text" id="${fieldId}" placeholder="Enter custom text">
+    `;
+    
+    customTextsContainer.appendChild(formGroup);
+    customTextsContainer.style.display = 'block';
+    customTextFields.push(fieldId);
+    
+    // Add input listener for real-time update
+    document.getElementById(fieldId).addEventListener('input', renderCertificate);
+    
+    // Add remove button listener
+    formGroup.querySelector('.remove-text-btn').addEventListener('click', (e) => {
+        const fieldToRemove = e.currentTarget.dataset.field;
+        removeCustomTextField(fieldToRemove);
+    });
+    
+    renderCertificate();
+    saveConfig();
+        
+        showModal(`Custom Text ${customTextCounter} added! You can now drag and position it on the canvas.`, 'Text Added', 'success');
+    });
+}
+
+// Remove custom text field
+const removeCustomTextField = (fieldId) => {
+    // Remove from DOM
+    const formGroup = document.getElementById(`${fieldId}-group`);
+    if (formGroup) formGroup.remove();
+    
+    // Remove from textPlaceholders
+    delete textPlaceholders[fieldId];
+    
+    // Remove from customTextFields array
+    customTextFields = customTextFields.filter(id => id !== fieldId);
+    
+    // Hide container if no custom fields
+    if (customTextFields.length === 0) {
+        customTextsContainer.style.display = 'none';
+    }
+    
+    // Deselect if this was selected
+    if (selectedPlaceholder === fieldId) {
+        selectedPlaceholder = null;
+    }
+    
+    renderCertificate();
+    saveConfig();
+};
+
+// Top Navigation Bar - User Menu (only on index page)
 const userInfo = document.getElementById('userInfo');
 const dropdownMenu = document.getElementById('dropdownMenu');
 const userName = document.getElementById('userName');
 const logoutBtn = document.getElementById('logoutBtn');
 const accountDetailsBtn = document.getElementById('accountDetails');
 
-// Display logged-in user's name
-const currentUser = sessionStorage.getItem('currentUser');
-if (currentUser) {
-    userName.textContent = currentUser;
+if (userInfo && dropdownMenu && userName && logoutBtn && accountDetailsBtn) {
+    // Display logged-in user's name
+    const currentUser = sessionStorage.getItem('userName') || sessionStorage.getItem('userEmail');
+    if (currentUser) {
+        userName.textContent = currentUser;
+    }
+
+    // Toggle dropdown menu
+    userInfo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userInfo.classList.toggle('active');
+        dropdownMenu.classList.toggle('active');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+        userInfo.classList.remove('active');
+        dropdownMenu.classList.remove('active');
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    dropdownMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    // Account Details
+    accountDetailsBtn.addEventListener('click', async () => {
+        const name = sessionStorage.getItem('userName') || 'User';
+        const email = sessionStorage.getItem('userEmail');
+        const userType = sessionStorage.getItem('userType');
+        
+        let message = `Name: ${name}`;
+        if (email) message += `\nEmail: ${email}`;
+        if (userType) message += `\nType: ${userType}`;
+        
+        await showModal(message, 'Account Details', 'info');
+        dropdownMenu.classList.remove('active');
+        userInfo.classList.remove('active');
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+        const confirmed = await showModal('Are you sure you want to logout?', 'Confirm Logout', 'warning', true);
+        if (confirmed) {
+            // Call logout API
+            try {
+                await fetch('logout.php', { method: 'POST' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            // Clear session storage
+            sessionStorage.removeItem('isAuthenticated');
+            sessionStorage.removeItem('userId');
+            sessionStorage.removeItem('userName');
+            sessionStorage.removeItem('userType');
+            sessionStorage.removeItem('userEmail');
+            
+            showModal('Logged out successfully!', 'Logout', 'success').then(() => {
+                window.location.href = 'login.php';
+            });
+        }
+    });
 }
 
-// Toggle dropdown menu
-userInfo.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userInfo.classList.toggle('active');
-    dropdownMenu.classList.toggle('active');
-});
+// Initialize main app only if on index page
+if (canvas && ctx) {
+    updateZoom(); // Apply zoom transform FIRST before anything else
+    loadTemplate(); // Load template to set canvas dimensions
+    loadConfig(); // Then load configuration (render happens in template.onload)
+}
 
-// Close dropdown when clicking outside
-document.addEventListener('click', () => {
-    userInfo.classList.remove('active');
-    dropdownMenu.classList.remove('active');
-});
+// ============================================
+// LOGIN PAGE FUNCTIONALITY
+// ============================================
 
-// Prevent dropdown from closing when clicking inside
-dropdownMenu.addEventListener('click', (e) => {
-    e.stopPropagation();
-});
+// Check if we're on the login page
+if (window.location.pathname.includes('login.php')) {
+    // Check if already logged in
+    (function() {
+        const isLoggedIn = sessionStorage.getItem('isAuthenticated');
+        if (isLoggedIn === 'true') {
+            window.location.href = 'index.php';
+        }
+    })();
 
-// Account Details
-accountDetailsBtn.addEventListener('click', () => {
-    const user = sessionStorage.getItem('currentUser') || 'User';
-    const loginTime = sessionStorage.getItem('loginTime');
-    let message = `Account Details:\n\nUsername: ${user}`;
-    
-    if (loginTime) {
-        const time = new Date(loginTime).toLocaleString();
-        message += `\nLogged in: ${time}`;
+    // Simple client-side mock login handler
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+
+            if (!user || !pass) {
+                await showModal('Please enter both username and password.', 'Login Required', 'warning');
+                return;
+            }
+
+            // Mock success: set authentication flag
+            sessionStorage.setItem('isAuthenticated', 'true');
+            sessionStorage.setItem('currentUser', user);
+            sessionStorage.setItem('loginTime', new Date().toISOString());
+            
+            // Store username if remember checked
+            if (document.getElementById('remember').checked) {
+                localStorage.setItem('mockUser', user);
+            } else {
+                localStorage.removeItem('mockUser');
+            }
+
+            // Redirect to index (authenticated)
+            await showModal('Signed in successfully! Redirecting to the app...', 'Welcome', 'success');
+            window.location.href = 'index.php';
+        });
     }
-    
-    alert(message);
-    dropdownMenu.classList.remove('active');
-    userInfo.classList.remove('active');
-});
 
-// Logout
-logoutBtn.addEventListener('click', () => {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.removeItem('isAuthenticated');
-        sessionStorage.removeItem('currentUser');
-        sessionStorage.removeItem('loginTime');
-        alert('Logged out successfully!');
-        window.location.href = 'login.html';
-    }
-});
+    // Prefill username if remembered
+    (function () {
+        const saved = localStorage.getItem('mockUser');
+        if (saved) {
+            const usernameInput = document.getElementById('username');
+            if (usernameInput) usernameInput.value = saved;
+        }
+    })();
+}
 
-// Initialize
-loadConfig(); // Load configuration from config.json first
-loadTemplate();
-updateZoom(); // Initialize zoom display
+// ============================================
+// INDEX PAGE AUTH CHECK
+// ============================================
+
+// Check authentication before loading the main app
+if (window.location.pathname.includes('index.php') || window.location.pathname.endsWith('/')) {
+    (function() {
+        const isLoggedIn = sessionStorage.getItem('isAuthenticated');
+        const userId = sessionStorage.getItem('userId');
+        
+        if (isLoggedIn !== 'true' || !userId) {
+            if (typeof showModal === 'function') {
+                showModal('Please log in to access the Certificate Generator.', 'Authentication Required', 'warning').then(() => {
+                    window.location.href = 'login.php';
+                });
+            } else {
+                window.location.href = 'login.php';
+            }
+        }
+    })();
+}

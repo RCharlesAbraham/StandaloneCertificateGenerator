@@ -40,31 +40,127 @@
       "varName": "{{VAR8}}",
       "dragging": false
     },
+    "signatureName": {
+      "x": 0.5,
+      "y": 0.85,
+      "fontSize": 16,
+      "label": "Signature Name",
+      "varName": "Name",
+      "dragging": false
+    },
+    "signatureDesignation": {
+      "x": 0.5,
+      "y": 0.88,
+      "fontSize": 14,
+      "label": "Signature Designation",
+      "varName": "Designation",
+      "dragging": false
+    },
+    "signatureCollege": {
+      "x": 0.5,
+      "y": 0.91,
+      "fontSize": 14,
+      "label": "Signature College",
+      "varName": "College Name",
+      "dragging": false
+    },
     "sig1": {
       "x": 0.430,
       "y": 0.800,
       "width": 170,
-      "height": 70,
+      "height": 74,
       "label": "Signature 1",
       "varName": "{{VAR4}}",
+      "dragging": false
+    },
+    "sig1Name": {
+      "x": 0.430,
+      "y": 0.880,
+      "fontSize": 14,
+      "label": "Sig1 Name",
+      "varName": "{{SIG1_NAME}}",
+      "dragging": false
+    },
+    "sig1Title": {
+      "x": 0.430,
+      "y": 0.900,
+      "fontSize": 12,
+      "label": "Sig1 Title",
+      "varName": "{{SIG1_TITLE}}",
+      "dragging": false
+    },
+    "sig1Org": {
+      "x": 0.430,
+      "y": 0.920,
+      "fontSize": 12,
+      "label": "Sig1 Org",
+      "varName": "{{SIG1_ORG}}",
       "dragging": false
     },
     "sig2": {
       "x": 0.639,
       "y": 0.804,
       "width": 170,
-      "height": 70,
+      "height": 74,
       "label": "Signature 2",
       "varName": "{{VAR5}}",
+      "dragging": false
+    },
+    "sig2Name": {
+      "x": 0.639,
+      "y": 0.880,
+      "fontSize": 14,
+      "label": "Sig2 Name",
+      "varName": "{{SIG2_NAME}}",
+      "dragging": false
+    },
+    "sig2Title": {
+      "x": 0.639,
+      "y": 0.900,
+      "fontSize": 12,
+      "label": "Sig2 Title",
+      "varName": "{{SIG2_TITLE}}",
+      "dragging": false
+    },
+    "sig2Org": {
+      "x": 0.639,
+      "y": 0.920,
+      "fontSize": 12,
+      "label": "Sig2 Org",
+      "varName": "{{SIG2_ORG}}",
       "dragging": false
     },
     "sig3": {
       "x": 0.848,
       "y": 0.803,
       "width": 170,
-      "height": 70,
+      "height": 74,
       "label": "Signature 3",
       "varName": "{{VAR6}}",
+      "dragging": false
+    },
+    "sig3Name": {
+      "x": 0.848,
+      "y": 0.880,
+      "fontSize": 14,
+      "label": "Sig3 Name",
+      "varName": "{{SIG3_NAME}}",
+      "dragging": false
+    },
+    "sig3Title": {
+      "x": 0.848,
+      "y": 0.900,
+      "fontSize": 12,
+      "label": "Sig3 Title",
+      "varName": "{{SIG3_TITLE}}",
+      "dragging": false
+    },
+    "sig3Org": {
+      "x": 0.848,
+      "y": 0.920,
+      "fontSize": 12,
+      "label": "Sig3 Org",
+      "varName": "{{SIG3_ORG}}",
       "dragging": false
     }
   }

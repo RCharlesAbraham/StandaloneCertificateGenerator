@@ -1,3 +1,16 @@
+<?php
+require_once 'config.php';
+
+// Check if user is authenticated
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_name = $_SESSION['user_name'] ?? 'User';
+$user_email = $_SESSION['user_email'] ?? '';
+$user_type = $_SESSION['user_type'] ?? '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,6 +22,28 @@
 </head>
 
 <body>
+    <!-- Modal Notification -->
+    <div id="notificationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="modalIcon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <h3 id="modalTitle">Notification</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalOk" class="btn btn-primary">OK</button>
+                <button id="modalCancel" class="btn btn-secondary" style="display:none;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Navigation Bar -->
     <nav class="top-navbar">
         <div class="navbar-brand">
@@ -27,7 +62,7 @@
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span id="userName">User</span>
+                <span id="userName"><?php echo htmlspecialchars($user_name); ?></span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-icon">
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
@@ -132,67 +167,27 @@
                         <input type="date" id="toDate" style="width:100%;">
                     </div>
                 </div>
+            
 
-                <div class="form-group">
-                    <label>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button id="insertTextBtn" class="btn btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Signatures:
-                    </label>
+                        Insert Text
+                    </button>
 
-                    <div class="form-row" style="display:flex; gap:12px; align-items:center;">
-                        <div class="signature-upload" style="flex:1; min-width:0;">
-                            <label for="sig1" class="upload-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="17 8 12 3 7 8" />
-                                    <line x1="12" y1="3" x2="12" y2="15" />
-                                </svg>
-                                Signature 1
-                            </label>
-                            <input type="file" id="sig1" accept="image/*" style="display: none;">
-                            <span id="sig1-name" class="file-name"></span>
-                        </div>
+                    <div id="customTextsContainer" style="display:none; margin:0;"></div>
 
-                        <div class="signature-upload" style="flex:1; min-width:0;">
-                            <label for="sig2" class="upload-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="17 8 12 3 7 8" />
-                                    <line x1="12" y1="3" x2="12" y2="15" />
-                                </svg>
-                                Signature 2
-                            </label>
-                            <input type="file" id="sig2" accept="image/*" style="display: none;">
-                            <span id="sig2-name" class="file-name"></span>
-                        </div>
-
-                        <div class="signature-upload" style="flex:1; min-width:0;">
-                            <label for="sig3" class="upload-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="17 8 12 3 7 8" />
-                                    <line x1="12" y1="3" x2="12" y2="15" />
-                                </svg>
-                                Signature 3
-                            </label>
-                            <input type="file" id="sig3" accept="image/*" style="display: none;">
-                            <span id="sig3-name" class="file-name"></span>
-                        </div>
-                    </div>
+                    <button id="generateBtn" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Generate PDF
+                    </button>
                 </div>
-
-                <button id="generateBtn" class="btn btn-primary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    Generate PDF
-                </button>
 
                 <div class="divider"></div>
 
@@ -257,11 +252,24 @@
 
                 <div class="divider"></div>
 
-                <div class="calibration-section">
-                    <h3 style="font-size: 14px; font-weight: 600; color: #67150a; margin-bottom: 10px;">
-                        Calibration Tools
+                <div class="instructions-section"
+                    style="padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                    <h3 style="font-size: 13px; font-weight: 600; color: #67150a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        Canvas Controls
                     </h3>
-                    <button id="toggleGrid" class="btn btn-secondary">
+                    <div style="font-size: 11px; color: #555; line-height: 1.5; margin-bottom: 10px;">
+                        <div style="margin-bottom: 4px;"><strong>Move:</strong> Click and drag any placeholder</div>
+                        <div style="margin-bottom: 4px;"><strong>Resize:</strong> Sizes are fixed in the layout (no UI size boxes)</div>
+                        <div style="margin-bottom: 4px;"><strong>Zoom:</strong> Mouse wheel + Ctrl, or Ctrl + Plus/Minus keys</div>
+                        <div style="margin-bottom: 4px;"><strong>Grid:</strong> Shows percentage markers for alignment</div>
+                        <div><strong>Tip:</strong> Zoom in for precise positioning!</div>
+                    </div>
+                    <button id="toggleGrid" class="btn btn-secondary" style="width: 100%; margin-top: 4px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <rect x="3" y="3" width="7" height="7" />
@@ -272,41 +280,6 @@
                         Toggle Grid
                     </button>
                     <button id="copyPositions" class="btn btn-secondary" style="display:none !important;" aria-hidden="true" tabindex="-1"></button>
-                </div>
-
-                <div class="divider"></div>
-
-                <div class="instructions-section"
-                    style="padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
-                    <h3
-                        style="font-size: 14px; font-weight: 600; color: #67150a; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-
-                        Canvas Controls
-                    </h3>
-                    <div style="font-size: 12px; color: #333; line-height: 1.6;">
-                        <div style="margin-bottom: 8px;">
-                            <strong>Move Placeholders:</strong><br>
-                            <span class="instruction-item">Click and drag any placeholder box</span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>Resize:</strong><br>
-                            <span class="instruction-item">Drag the bottom-right corner handle</span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>Zoom:</strong><br>
-                            <span class="instruction-item">• Mouse wheel + Ctrl<br>
-                                • Ctrl + Plus/Minus keys<br>
-                                • Use toolbar buttons</span>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>Grid Toggle:</strong><br>
-                            <span class="instruction-item">Shows percentage markers for alignment</span>
-                        </div>
-                        <div>
-                            <strong>Tip:</strong><br>
-                            <span class="instruction-item">Zoom in for precise positioning!</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -366,24 +339,24 @@
                 </div>
             </div>
             <div class="canvas-container" id="canvasContainer">
+                <div style="font-size: 12px; color: #666; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 8px; border-left: 3px solid #00a8ff;">
+                </div>
                 <canvas id="certificateCanvas"></canvas>
             </div>
         </div>
     </div>
 
+    <script>
+        // Set session storage from PHP session
+        sessionStorage.setItem('isAuthenticated', 'true');
+        sessionStorage.setItem('userId', '<?php echo $_SESSION['user_id']; ?>');
+        sessionStorage.setItem('userName', '<?php echo addslashes($user_name); ?>');
+        sessionStorage.setItem('userType', '<?php echo $user_type; ?>');
+        sessionStorage.setItem('userEmail', '<?php echo addslashes($user_email); ?>');
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script>
-        // Check authentication before loading the app
-        (function() {
-            const isLoggedIn = sessionStorage.getItem('isAuthenticated');
-            if (isLoggedIn !== 'true') {
-                alert('Please log in to access the Certificate Generator.');
-                window.location.href = 'login.html';
-            }
-        })();
-    </script>
     <script src="script.js"></script>
 </body>
 

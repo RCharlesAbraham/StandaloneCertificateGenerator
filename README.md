@@ -1,6 +1,22 @@
-# Certificate Generator
+# Certificate Generator - PHP/MySQL System
 
-A web-based certificate generator that creates personalized certificates from template images with real-time preview and Excel data import.
+A complete web-based certificate generator with user management, database integration, and admin panel.
+
+## 🚀 Quick Start
+
+1. **Start XAMPP** - Start Apache and MySQL
+2. **Import Database** - Import `db/database_schema.sql` into MySQL
+3. **Test Setup** - Visit `http://localhost:3000/test_database.php`
+4. **Start Using** - Go to `http://localhost:3000/login.php`
+
+## 🔐 Default Credentials
+
+**Admin Login**: `admin_login.php`
+- Username: `Admin@MCC`
+- Password: `Admin123`
+
+**User Login**: `login.php`
+- Create account at: `register.php`
 
 ## Features
 
