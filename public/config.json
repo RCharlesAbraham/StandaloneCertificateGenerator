@@ -1,0 +1,12 @@
+{
+    "textPlaceholders": {
+        "certNo": {
+            "x": 0.849,
+            "y": 0.121,
+            "fontSize": 25,
+            "label": "Certificate No",
+            "varName": "{{VAR2}}",
+            "dragging": false
+        }
+    }
+}

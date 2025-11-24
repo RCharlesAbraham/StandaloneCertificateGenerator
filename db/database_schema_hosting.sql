@@ -1,8 +1,12 @@
+-- ============================================================
 -- Certificate Generator Database Schema
--- Create Database
-CREATE DATABASE
-IF NOT EXISTS certificate_generator;
-USE certificate_generator;
+-- For Shared Hosting (No CREATE DATABASE privileges)
+-- ============================================================
+-- INSTRUCTIONS:
+-- 1. Create database through your hosting control panel (cPanel/phpMyAdmin)
+-- 2. Select the database in phpMyAdmin
+-- 3. Import this file OR copy-paste the SQL below
+-- ============================================================
 
 -- Users Table (Students and Staff)
 CREATE TABLE
@@ -64,23 +68,22 @@ IF NOT EXISTS admins
     last_login TIMESTAMP NULL
 );
 
--- Insert default admin
+-- Insert default admin (username: Admin@MCC, password: Admin123)
 INSERT INTO admins
     (username, password)
 VALUES
     ('Admin@MCC', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
--- password: Admin123
 ON DUPLICATE KEY
 UPDATE username=username;
 
--- Insert demo users (for admin testing)
+-- Insert demo users (for testing)
 INSERT INTO users
-    (user_type, reg_no, name, designation, department, phone_no, email, password, college, status)
+    (user_type, stream, level, reg_no, name, designation, department, phone_no, email, password, college, status)
 VALUES
-    -- Demo Student
-    ('student', 'STU2024001', 'John Doe', NULL, 'Computer Science', '9876543210', 'john.doe@student.mcc.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Madras Christian College', 'active'),
+    -- Demo Student (Aided-UG)
+    ('student', 'aided', 'ug', 'STU2024001', 'John Doe', NULL, 'Computer Science', '9876543210', 'john.doe@student.mcc.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Madras Christian College', 'active'),
     -- Demo Staff
-    ('staff', NULL, 'Dr. Jane Smith', 'Associate Professor', 'Mathematics', '9876543211', 'jane.smith@staff.mcc.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Madras Christian College', 'active')
+    ('staff', NULL, NULL, NULL, 'Dr. Jane Smith', 'Associate Professor', 'Mathematics', '9876543211', 'jane.smith@staff.mcc.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Madras Christian College', 'active')
 ON DUPLICATE KEY
 UPDATE email=email;
 

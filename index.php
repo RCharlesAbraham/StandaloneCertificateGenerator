@@ -1,25 +1,11 @@
 <?php
-require_once 'config.php';
-
-// Check if user is authenticated
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit();
-}
-
-$user_name = $_SESSION['user_name'] ?? 'User';
-$user_email = $_SESSION['user_email'] ?? '';
-$user_type = $_SESSION['user_type'] ?? '';
+/**
+ * Root Index - Redirects to public/index.php
+ * This allows keeping folder structure intact for hosting
+ */
+header('Location: public/index.php');
+exit();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Generator</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
 
 <body>
     <!-- Modal Notification -->
