@@ -186,7 +186,7 @@
         echo '<div class="info">';
         echo '<strong>Endpoint:</strong> public/actions/register_process.php<br>';
         echo '<strong>Method:</strong> POST<br>';
-        echo '<strong>Required fields for students:</strong> user_type, stream, level, reg_no, name, department, phone_no, email, password, confirm_password, college_type';
+        echo '<strong>Required fields for students:</strong> stream, level, reg_no, name, department, phone_no, email, password, confirm_password';
         echo '</div>';
         
         // Show sample test data
@@ -194,7 +194,6 @@
         echo '<strong>Sample Test Data:</strong><br>';
         echo '<pre>';
         echo json_encode([
-            'user_type' => 'student',
             'stream' => 'aided',
             'level' => 'ug',
             'reg_no' => 'TEST2024001',
@@ -204,14 +203,14 @@
             'email' => 'test.student@example.com',
             'password' => 'Test123',
             'confirm_password' => 'Test123',
-            'college_type' => 'mcc'
+            //'college_type' => 'mcc' // removed: college is no longer a registration field
         ], JSON_PRETTY_PRINT);
         echo '</pre>';
         echo '</div>';
         
         // Show existing users
         echo "<h2>5. Existing Users</h2>";
-        $result = $conn->query("SELECT id, user_type, stream, level, reg_no, program_id, name, department, email, created_at FROM users ORDER BY created_at DESC LIMIT 10");
+        $result = $conn->query("SELECT id, stream, level, reg_no, program_id, name, department, email, created_at, CASE WHEN reg_no IS NOT NULL AND reg_no <> '' THEN 'student' ELSE 'staff' END as user_type FROM users ORDER BY created_at DESC LIMIT 10");
         if ($result && $result->num_rows > 0) {
             echo '<table class="db-table">';
             echo '<tr><th>ID</th><th>Type</th><th>Stream</th><th>Level</th><th>Reg No</th><th>Program ID</th><th>Name</th><th>Department</th><th>Email</th><th>Created</th></tr>';

@@ -42,6 +42,9 @@ if (isset($_SESSION['user_id'])) {
 
     <div class="login-wrapper">
         <div class="login-card">
+            <div class="login-logo-wrapper logo-wrapper" style="text-align:center; margin-bottom:12px;">
+                <img src="assets/MMC-LOGO-2-229x300.png" alt="MCC-MRF Logo" class="login-logo logo">
+            </div>
             <div class="header" style="display:flex; align-items:center; gap:12px;">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -72,7 +75,7 @@ if (isset($_SESSION['user_id'])) {
                     </div>
 
                     <div class="login-actions">
-                        <button type="submit" class="btn btn-primary" style="flex:1;">Sign In</button>
+                        <button type="submit" class="btn btn-primary btn-block" aria-label="Sign In">Sign In</button>
                     </div>
                 </div>
             </form>

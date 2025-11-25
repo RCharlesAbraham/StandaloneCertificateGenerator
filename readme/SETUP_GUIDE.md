@@ -50,13 +50,13 @@ define('DB_NAME', 'certificate_generator');
 
 ## User Workflow
 
-### For New Users (Students/Staff)
+### For New Users (Students - registration is student-only)
 
 1. **Go to:** http://localhost/StandaloneCertificateGenerator/register.html
-2. **Select User Type:** Student or Staff
+2. **Student Registration Only**: Registration is student-only from the public UI. Staff accounts should be managed by admins or created via admin panel.
 3. **Fill Registration Form:**
-   - Student needs: Reg No, Name, Department, Phone, College, Email, Password
-   - Staff needs: Name, Designation, Department, Phone, College, Email, Password
+   - Student needs: Reg No, Name, Department, Phone, Email, Password
+   - Note: `college` and `designation` are no longer part of public registration. All users are assumed to be from Madras Christian College (MCC) unless created otherwise by an admin.
 4. **Submit** → Account created
 5. **Go to Login** → http://localhost/StandaloneCertificateGenerator/login.html
 6. **Enter credentials** → Access certificate generator

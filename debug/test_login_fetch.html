@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #67150a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #4a0f07;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .warning {
+            color: orange;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Login API Direct Test</h2>
+        <p>This will call the actual login API endpoint via JavaScript fetch.</p>
+
+        <button onclick="testLogin()">Test Login API</button>
+
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        async function testLogin() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing login API...</p>';
+
+            const formData = new FormData();
+            formData.append('email', '2301722084028@mcc.edu.in');
+            formData.append('password', '123456');
+
+            try {
+                const response = await fetch('public/actions/login_process.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Get the raw response text first
+                const rawText = await response.text();
+
+                resultsDiv.innerHTML = '<h3>Raw Response:</h3>';
+                resultsDiv.innerHTML += '<p><strong>Status:</strong> ' + response.status + '</p>';
+                resultsDiv.innerHTML += '<p><strong>Content-Type:</strong> ' + response.headers.get('Content-Type') + '</p>';
+                resultsDiv.innerHTML += '<p><strong>Response Length:</strong> ' + rawText.length + ' bytes</p>';
+
+                // Show hex dump of first 50 characters
+                let hexDump = '';
+                for (let i = 0; i < Math.min(50, rawText.length); i++) {
+                    hexDump += rawText.charCodeAt(i).toString(16).padStart(2, '0') + ' ';
+                }
+                resultsDiv.innerHTML += '<p><strong>First 50 bytes (hex):</strong></p>';
+                resultsDiv.innerHTML += '<pre>' + hexDump + '</pre>';
+
+                resultsDiv.innerHTML += '<h3>Raw Text:</h3>';
+                resultsDiv.innerHTML += '<pre>' + rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+
+                // Try to parse JSON
+                try {
+                    const data = JSON.parse(rawText);
+                    resultsDiv.innerHTML += '<h3 class="success">✓ JSON Parse Successful!</h3>';
+                    resultsDiv.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } catch (e) {
+                    resultsDiv.innerHTML += '<h3 class="error">✗ JSON Parse Failed!</h3>';
+                    resultsDiv.innerHTML += '<p class="error">' + e.message + '</p>';
+
+                    // Try to find where JSON starts
+                    const jsonStart = rawText.indexOf('{');
+                    if (jsonStart > 0) {
+                        resultsDiv.innerHTML += '<p class="warning">⚠ Found ' + jsonStart + ' bytes before JSON!</p>';
+                        resultsDiv.innerHTML += '<p><strong>Content before JSON:</strong></p>';
+                        resultsDiv.innerHTML += '<pre style="background: #ffe6e6;">' +
+                            rawText.substring(0, jsonStart).replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                            '</pre>';
+                    }
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML += '<h3 class="error">✗ Network Error</h3>';
+                resultsDiv.innerHTML += '<p class="error">' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+
+</html>

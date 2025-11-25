@@ -18,28 +18,27 @@ if (isset($_SESSION['user_id'])) {
 <body>
     <div class="register-container">
         <div class="register-card">
-            <div class="register-header">
-                <h1>Create Account</h1>
-                <p>Certificate Generator - Madras Christian College</p>
+            <div class="login-header-row" style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                <div class="login-logo-wrapper" style="flex:0 0 auto;">
+                    <img src="assets/MMC-LOGO-2-229x300.png" alt="MCC-MRF Logo" class="login-logo" style="width:283px; max-width:80%; height:auto; display:block; margin:0 auto; padding-bottom:20px;">
+                </div>
+                <div class="register-header" style="flex:1 1 auto; text-align:left; min-width:200px;">  
+                    <h2 style="margin:0; font-size:1.5rem; font-weight:600; color:#67150a;">Create Account</h2>
+                    <p style="margin:4px 0 0; color:#666;">Certificate Generator - Madras Christian College</p>
+                </div>
             </div>
 
             <div id="alertBox"></div>
 
             <form id="registerForm">
-                <!-- User Type Selection -->
-                <div class="form-group">
-                    <label>User Type <span class="required">*</span></label>
-                    <div class="user-type-options">
-                        <div class="radio-option">
-                            <input type="radio" name="user_type" id="typeStudent" value="student" checked>
-                            <label for="typeStudent">Student</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" name="user_type" id="typeStaff" value="staff">
-                            <label for="typeStaff">Staff</label>
-                        </div>
-                    </div>
+                <div class="form-grid">
+                    
+                <!-- User Type Selection removed: use Registration Number (students) or Designation (staff) -->
+                <div class="form-group col-span-2">
+                    <p style="color:#666; font-size:14px; margin-bottom:8px;">Please provide your Registration Number to create a student account. Staff registrations are handled separately by admins.</p>
                 </div>
+
+                
 
                 <!-- Student Fields -->
                 <div id="studentFields">
@@ -47,14 +46,14 @@ if (isset($_SESSION['user_id'])) {
                     <div class="form-group">
                         <label>Stream <span class="required">*</span></label>
                         <div class="stream-options">
-                            <div class="radio-option">
+                            <label class="radio-option">
                                 <input type="radio" name="stream" id="streamAided" value="aided" required>
-                                <label for="streamAided">Aided</label>
-                            </div>
-                            <div class="radio-option">
+                                <span>Aided</span>
+                            </label>
+                            <label class="radio-option">
                                 <input type="radio" name="stream" id="streamSFS" value="sfs" required>
-                                <label for="streamSFS">Self-Financed Stream (SFS)</label>
-                            </div>
+                                <span>Self-Financed Stream (SFS)</span>
+                            </label>
                         </div>
                     </div>
 
@@ -62,39 +61,33 @@ if (isset($_SESSION['user_id'])) {
                     <div class="form-group">
                         <label>Level <span class="required">*</span></label>
                         <div class="level-options">
-                            <div class="radio-option">
+                            <label class="radio-option">
                                 <input type="radio" name="level" id="levelUG" value="ug" required>
-                                <label for="levelUG">UG (Undergraduate)</label>
-                            </div>
-                            <div class="radio-option">
+                                <span>UG (Undergraduate)</span>
+                            </label>
+                            <label class="radio-option">
                                 <input type="radio" name="level" id="levelPG" value="pg" required>
-                                <label for="levelPG">PG (Postgraduate)</label>
-                            </div>
+                                <span>PG (Postgraduate)</span>
+                            </label>
                         </div>
                     </div>
 
                     <!-- Registration Number -->
                     <div class="form-group">
                         <label for="reg_no">Registration Number <span class="required">*</span></label>
-                        <input type="text" id="reg_no" name="reg_no" placeholder="Enter your registration number">
+                        <input type="text" id="reg_no" name="reg_no" placeholder="Enter numbers only" required pattern="[0-9]+" title="Only numbers allowed">
                     </div>
                 </div>
 
-                <!-- Staff Fields -->
-                <div id="staffFields" class="hidden">
-                    <div class="form-group">
-                        <label for="designation">Designation <span class="required">*</span></label>
-                        <input type="text" id="designation" name="designation" placeholder="e.g., Assistant Professor, HOD">
-                    </div>
-                </div>
+                <!-- Staff registration disabled: only student signup is supported -->
 
                 <div class="form-group">
                     <label for="name">Full Name <span class="required">*</span></label>
-                    <input type="text" id="name" name="name" required placeholder="Enter your full name">
+                    <input type="text" id="name" name="name" required placeholder="Enter your full name" pattern="[A-Za-z ]+" title="Only letters and spaces allowed">
                 </div>
 
                 <!-- Department Selection (Dynamic based on Stream & Level) -->
-                <div class="form-group" id="departmentGroup">
+                <div class="form-group col-span-2" id="departmentGroup">
                     <label for="department">Department <span class="required">*</span></label>
                     <select id="department" name="department" required>
                         <option value="">-- Select Stream and Level first --</option>
@@ -107,8 +100,8 @@ if (isset($_SESSION['user_id'])) {
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Email Address <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                    <label for="email">College Email <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" required placeholder="yourname@mcc.edu.in" pattern="[a-zA-Z0-9._%+-]+@mcc\.edu\.in$" title="Must be a valid @mcc.edu.in email address">
                 </div>
 
                 <div class="form-group">
@@ -121,22 +114,10 @@ if (isset($_SESSION['user_id'])) {
                     <input type="password" id="confirm_password" name="confirm_password" required placeholder="Re-enter your password">
                 </div>
 
-                <div class="form-group">
-                    <label>College <span class="required">*</span></label>
-                    <div class="college-options">
-                        <div class="college-radio">
-                            <input type="radio" name="college_type" id="collegeMCC" value="mcc" checked>
-                            <label for="collegeMCC">Madras Christian College</label>
-                        </div>
-                        <div class="college-radio">
-                            <input type="radio" name="college_type" id="collegeOther" value="other">
-                            <label for="collegeOther">Other</label>
-                        </div>
-                    </div>
-                    <input type="text" id="other_college" name="other_college" class="hidden" placeholder="Enter college name">
-                </div>
+                <!-- College removed: all users assumed to be from Madras Christian College -->
 
-                <button type="submit" class="submit-btn">Create Account</button>
+                <button type="submit" class="submit-btn col-span-2">Create Account</button>
+                </div>
             </form>
 
             <div class="login-link">
@@ -215,42 +196,21 @@ if (isset($_SESSION['user_id'])) {
             }
         };
 
-        // User type toggle
-        const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
+        // Student-only registration: ensure student fields visible and required
         const studentFields = document.getElementById('studentFields');
-        const staffFields = document.getElementById('staffFields');
         const departmentGroup = document.getElementById('departmentGroup');
+        const regNoInput = document.getElementById('reg_no');
 
-        userTypeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                const type = radio.value;
+        function ensureStudentFields() {
+            studentFields.classList.remove('hidden');
+            departmentGroup.style.display = 'block';
+            if (regNoInput) regNoInput.required = true;
+            document.querySelectorAll('input[name="stream"]').forEach(s => s.required = true);
+            document.querySelectorAll('input[name="level"]').forEach(l => l.required = true);
+        }
 
-                if (type === 'student') {
-                    studentFields.classList.remove('hidden');
-                    staffFields.classList.add('hidden');
-                    departmentGroup.style.display = 'block';
-                    document.getElementById('reg_no').required = true;
-                    document.getElementById('designation').required = false;
-                    
-                    // Make stream and level required
-                    document.querySelectorAll('input[name="stream"]').forEach(s => s.required = true);
-                    document.querySelectorAll('input[name="level"]').forEach(l => l.required = true);
-                } else {
-                    studentFields.classList.add('hidden');
-                    staffFields.classList.remove('hidden');
-                    departmentGroup.style.display = 'block';
-                    document.getElementById('reg_no').required = false;
-                    document.getElementById('designation').required = true;
-                    
-                    // Make stream and level not required for staff
-                    document.querySelectorAll('input[name="stream"]').forEach(s => s.required = false);
-                    document.querySelectorAll('input[name="level"]').forEach(l => l.required = false);
-                    
-                    // Reset department to text input for staff
-                    resetDepartmentForStaff();
-                }
-            });
-        });
+        // Initialize on page load
+        ensureStudentFields();
 
         // Stream and Level selection handlers
         const streamRadios = document.querySelectorAll('input[name="stream"]');
@@ -280,14 +240,7 @@ if (isset($_SESSION['user_id'])) {
             }
         }
 
-        function resetDepartmentForStaff() {
-            // For staff, replace select with text input
-            const deptGroup = document.getElementById('departmentGroup');
-            deptGroup.innerHTML = `
-                <label for="department">Department <span class="required">*</span></label>
-                <input type="text" id="department" name="department" required placeholder="e.g., Computer Science, Mathematics">
-            `;
-        }
+        // resetDepartmentForStaff removed - staff registration disabled
 
         streamRadios.forEach(radio => {
             radio.addEventListener('change', updateDepartmentDropdown);
@@ -297,22 +250,7 @@ if (isset($_SESSION['user_id'])) {
             radio.addEventListener('change', updateDepartmentDropdown);
         });
 
-        // College type toggle
-        const collegeRadios = document.querySelectorAll('input[name="college_type"]');
-        const otherCollegeInput = document.getElementById('other_college');
-
-        collegeRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (radio.value === 'other') {
-                    otherCollegeInput.classList.remove('hidden');
-                    otherCollegeInput.required = true;
-                } else {
-                    otherCollegeInput.classList.add('hidden');
-                    otherCollegeInput.required = false;
-                    otherCollegeInput.value = '';
-                }
-            });
-        });
+        // College selection removed (no longer part of registration form)
 
         // Form validation and submission
         const registerForm = document.getElementById('registerForm');
@@ -322,7 +260,36 @@ if (isset($_SESSION['user_id'])) {
             e.preventDefault();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm_password').value;
+            const email = document.getElementById('email').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const regNo = document.getElementById('reg_no').value.trim();
             alertBox.innerHTML = '';
+
+            // Validate registration number (numbers only)
+            if (!regNo) {
+                showAlert('Registration number is required to create an account.', 'error');
+                return;
+            }
+            if (!/^[0-9]+$/.test(regNo)) {
+                showAlert('Registration number must contain only numbers', 'error');
+                return;
+            }
+
+            // Validate full name (letters and spaces only)
+            if (!/^[A-Za-z ]+$/.test(name)) {
+                showAlert('Full name must contain only letters and spaces', 'error');
+                return;
+            }
+
+            // Validate college email (must end with @mcc.edu.in)
+            if (!email.endsWith('@mcc.edu.in')) {
+                showAlert('Email must be a valid college email ending with @mcc.edu.in', 'error');
+                return;
+            }
+            if (!document.querySelector('input[name="stream"]:checked') || !document.querySelector('input[name="level"]:checked')) {
+                showAlert('Please select stream and level for students', 'error');
+                return;
+            }
 
             if (password.length < 6) {
                 showAlert('Password must be at least 6 characters long', 'error');

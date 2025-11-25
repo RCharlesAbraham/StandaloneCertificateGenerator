@@ -1,9 +1,9 @@
 <?php
 // Database configuration
-define('DB_HOST', 'sql100.infinityfree.com');
-define('DB_USER', 'if0_40495407');
-define('DB_PASS', 'Chab2000');
-define('DB_NAME', 'if0_40495407_certificate_generator');
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'certificate_generator');
 
 // Create connection
 function getDBConnection() {
@@ -18,7 +18,9 @@ function getDBConnection() {
 }
 
 // Session configuration
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Timezone
 date_default_timezone_set('Asia/Kolkata');
@@ -26,4 +28,3 @@ date_default_timezone_set('Asia/Kolkata');
 // Base URL
 // Update BASE_URL to point to your public web directory, e.g. http://localhost/ or http://localhost:3000/
 if (!defined('BASE_URL')) define('BASE_URL', 'http://localhost:3000/');
-?>

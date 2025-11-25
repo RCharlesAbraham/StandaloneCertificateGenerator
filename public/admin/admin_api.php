@@ -1,5 +1,7 @@
 <?php
+ob_start();
 require_once __DIR__ . '/../includes/config.php';
+ob_end_clean();
 
 header('Content-Type: application/json');
 
@@ -44,12 +46,12 @@ function getDashboardStats($conn) {
     $result = $conn->query("SELECT COUNT(*) as count FROM users");
     $total_users = $result->fetch_assoc()['count'];
     
-    // Get total students
-    $result = $conn->query("SELECT COUNT(*) as count FROM users WHERE user_type = 'student'");
+    // Get total students (users with a registration number)
+    $result = $conn->query("SELECT COUNT(*) as count FROM users WHERE reg_no IS NOT NULL AND reg_no <> ''");
     $total_students = $result->fetch_assoc()['count'];
     
-    // Get total staff
-    $result = $conn->query("SELECT COUNT(*) as count FROM users WHERE user_type = 'staff'");
+    // Get total staff (users without a registration number)
+    $result = $conn->query("SELECT COUNT(*) as count FROM users WHERE reg_no IS NULL OR reg_no = ''");
     $total_staff = $result->fetch_assoc()['count'];
     
     // Get total certificates generated
@@ -57,7 +59,7 @@ function getDashboardStats($conn) {
     $total_certificates = $result->fetch_assoc()['count'] ?? 0;
     
     // Get recent activity
-    $result = $conn->query("SELECT al.*, u.name, u.user_type FROM activity_logs al JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 10");
+    $result = $conn->query("SELECT al.*, u.name, CASE WHEN u.reg_no IS NOT NULL AND u.reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM activity_logs al JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 10");
     
     $recent_activity = [];
     while ($row = $result->fetch_assoc()) {
@@ -80,7 +82,7 @@ function getUsers($conn) {
     $search = $_GET['search'] ?? '';
     $type = $_GET['type'] ?? '';
     
-    $sql = "SELECT * FROM users WHERE 1=1";
+    $sql = "SELECT *, CASE WHEN reg_no IS NOT NULL AND reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM users WHERE 1=1";
     
     if (!empty($search)) {
         $search = $conn->real_escape_string($search);
@@ -89,7 +91,11 @@ function getUsers($conn) {
     
     if (!empty($type)) {
         $type = $conn->real_escape_string($type);
-        $sql .= " AND user_type = '$type'";
+        if ($type === 'student') {
+            $sql .= " AND reg_no IS NOT NULL AND reg_no <> ''";
+        } elseif ($type === 'staff') {
+            $sql .= " AND (reg_no IS NULL OR reg_no = '')";
+        }
     }
     
     $sql .= " ORDER BY created_at DESC";
@@ -108,7 +114,7 @@ function getUsers($conn) {
 }
 
 function getCertificates($conn) {
-    $result = $conn->query("SELECT cl.*, u.name as user_name, u.user_type FROM certificate_logs cl JOIN users u ON cl.user_id = u.id ORDER BY cl.generated_at DESC LIMIT 100");
+    $result = $conn->query("SELECT cl.*, u.name as user_name, CASE WHEN u.reg_no IS NOT NULL AND u.reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM certificate_logs cl JOIN users u ON cl.user_id = u.id ORDER BY cl.generated_at DESC LIMIT 100");
     
     $certificates = [];
     while ($row = $result->fetch_assoc()) {
@@ -122,7 +128,7 @@ function getCertificates($conn) {
 }
 
 function getActivityLogs($conn) {
-    $result = $conn->query("SELECT al.*, u.name as user_name, u.user_type FROM activity_logs al JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 100");
+    $result = $conn->query("SELECT al.*, u.name as user_name, CASE WHEN u.reg_no IS NOT NULL AND u.reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM activity_logs al JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 100");
     
     $activities = [];
     while ($row = $result->fetch_assoc()) {
@@ -148,4 +154,3 @@ function getSessions($conn) {
         'sessions' => $sessions
     ]);
 }
-?>

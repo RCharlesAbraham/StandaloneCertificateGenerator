@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Diagnostics - Certificate Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #67150a;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #67150a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4a0f07;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading.active {
+            display: inline-block;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .test-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .test-card.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .test-card.warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .test-card.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .test-card.skipped {
+            border-left: 4px solid #6c757d;
+            opacity: 0.7;
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .test-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .test-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .test-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .test-status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .test-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .test-status.skipped {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .test-details {
+            display: none;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 15px;
+        }
+
+        .test-details.expanded {
+            display: block;
+        }
+
+        .detail-item {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            margin-right: 8px;
+        }
+
+        .detail-value {
+            color: #6c757d;
+        }
+
+        .detail-value.success {
+            color: #28a745;
+        }
+
+        .detail-value.error {
+            color: #dc3545;
+        }
+
+        .error-message {
+            padding: 12px;
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            border-radius: 4px;
+            color: #721c24;
+            margin-top: 10px;
+        }
+
+        .warning-message {
+            padding: 12px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            color: #856404;
+            margin-top: 10px;
+        }
+
+        .json-viewer {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .json-viewer.active {
+            display: block;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 System Diagnostics</h1>
+            <p>Certificate Generator - Comprehensive System Check</p>
+            <div id="overallStatus"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="runDiagnostics()">Run Diagnostics</button>
+            <button class="btn btn-secondary" onclick="toggleJSON()">Toggle JSON View</button>
+            <button class="btn btn-secondary" onclick="downloadReport()">Download Report</button>
+            <span class="loading" id="loading">⏳ Running tests...</span>
+        </div>
+
+        <div class="results-container">
+            <div id="results"></div>
+            <pre class="json-viewer" id="jsonViewer"></pre>
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+    </div>
+
+    <script>
+        let diagnosticData = null;
+
+        // Run diagnostics on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            runDiagnostics();
+        });
+
+        async function runDiagnostics() {
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const jsonViewer = document.getElementById('jsonViewer');
+
+            loading.classList.add('active');
+            results.innerHTML = '<p style="text-align:center; color:#999;">Running diagnostics...</p>';
+            jsonViewer.textContent = '';
+
+            try {
+                const response = await fetch('system_diagnostics.php');
+                const data = await response.json();
+
+                diagnosticData = data;
+                displayResults(data);
+                jsonViewer.textContent = JSON.stringify(data, null, 2);
+
+                document.getElementById('timestamp').textContent = `Last checked: ${data.timestamp}`;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="error-message">
+                        <strong>❌ Fatal Error:</strong> ${error.message}
+                    </div>
+                `;
+                console.error('Diagnostic error:', error);
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            const overallStatus = document.getElementById('overallStatus');
+
+            // Overall status badge
+            const statusClass = data.overall_status === 'success' ? 'status-success' :
+                data.overall_status === 'warning' ? 'status-warning' : 'status-error';
+            const statusIcon = data.overall_status === 'success' ? '✅' :
+                data.overall_status === 'warning' ? '⚠️' : '❌';
+
+            overallStatus.innerHTML = `
+                <span class="status-badge ${statusClass}">
+                    ${statusIcon} System Status: ${data.overall_status.toUpperCase()}
+                </span>
+            `;
+
+            // Test cards
+            let html = '';
+            for (const [key, test] of Object.entries(data.tests)) {
+                html += createTestCard(key, test);
+            }
+
+            results.innerHTML = html;
+        }
+
+        function createTestCard(key, test) {
+            const statusClass = test.status || 'success';
+            const statusIcon = statusClass === 'success' ? '✅' :
+                statusClass === 'warning' ? '⚠️' :
+                    statusClass === 'error' ? '❌' : '⏭️';
+
+            let detailsHTML = '';
+            if (test.details) {
+                detailsHTML = createDetailsHTML(test.details);
+            }
+
+            let messageHTML = '';
+            if (test.error) {
+                messageHTML = `<div class="error-message"><strong>Error:</strong> ${test.error}</div>`;
+            } else if (test.warning) {
+                messageHTML = `<div class="warning-message"><strong>Warning:</strong> ${test.warning}</div>`;
+            }
+
+            return `
+                <div class="test-card ${statusClass}">
+                    <div class="test-header" onclick="toggleDetails('${key}')">
+                        <span class="test-name">${statusIcon} ${test.name}</span>
+                        <span class="test-status ${statusClass}">${statusClass}</span>
+                    </div>
+                    ${messageHTML}
+                    <div class="test-details" id="details-${key}">
+                        ${detailsHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createDetailsHTML(details, indent = 0) {
+            let html = '';
+            for (const [key, value] of Object.entries(details)) {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    html += `
+                        <div class="detail-item" style="margin-left: ${indent * 20}px;">
+                            <span class="detail-label">${key}:</span>
+                        </div>
+                        ${createDetailsHTML(value, indent + 1)}
+                    `;
+                } else {
+                    const displayValue = typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : value;
+                    const valueClass = typeof value === 'boolean' ? (value ? 'success' : 'error') : '';
+
+                    html += `
+                        <div class="detail-item" style="margin-left: ${indent * 20}px;">
+                            <span class="detail-label">${key}:</span>
+                            <span class="detail-value ${valueClass}">${displayValue}</span>
+                        </div>
+                    `;
+                }
+            }
+            return html;
+        }
+
+        function toggleDetails(key) {
+            const details = document.getElementById(`details-${key}`);
+            details.classList.toggle('expanded');
+        }
+
+        function toggleJSON() {
+            const jsonViewer = document.getElementById('jsonViewer');
+            jsonViewer.classList.toggle('active');
+        }
+
+        function downloadReport() {
+            if (!diagnosticData) {
+                alert('No diagnostic data available. Please run diagnostics first.');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(diagnosticData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `system-diagnostics-${new Date().getTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+
+</html>

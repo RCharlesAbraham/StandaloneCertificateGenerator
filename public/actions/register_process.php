@@ -1,31 +1,47 @@
 <?php
+// Clean any previous output
+if (ob_get_level()) ob_end_clean();
+ob_start();
+
 require_once __DIR__ . '/../../includes/config.php';
 
-header('Content-Type: application/json');
+// Clear any output from config
+ob_clean();
+
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
     exit;
 }
 
-// Get form data
-$user_type = $_POST['user_type'] ?? '';
+$user_type = 'student'; // default to student-only registration
 $stream = $_POST['stream'] ?? null;
 $level = $_POST['level'] ?? null;
 $reg_no = $_POST['reg_no'] ?? null;
 $name = trim($_POST['name'] ?? '');
-$designation = $_POST['designation'] ?? null;
+$designation = null; // designation removed from UI
 $department = trim($_POST['department'] ?? '');
 $phone_no = trim($_POST['phone_no'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 $confirm_password = $_POST['confirm_password'] ?? '';
-$college_type = $_POST['college_type'] ?? 'mcc';
-$other_college = trim($_POST['other_college'] ?? '');
 
-// Validation
-if (empty($user_type) || !in_array($user_type, ['student', 'staff'])) {
-    echo json_encode(['success' => false, 'message' => 'Please select user type']);
+// Students only: reg_no is required
+if (empty($reg_no)) {
+    echo json_encode(['success' => false, 'message' => 'Registration number is required']);
+    exit;
+}
+
+// Validate registration number (numbers only)
+if (!preg_match('/^[0-9]+$/', $reg_no)) {
+    echo json_encode(['success' => false, 'message' => 'Registration number must contain only numbers']);
+    exit;
+}
+
+// Validate full name (letters and spaces only)
+if (!preg_match('/^[A-Za-z ]+$/', $name)) {
+    echo json_encode(['success' => false, 'message' => 'Full name must contain only letters and spaces']);
     exit;
 }
 
@@ -49,13 +65,16 @@ if ($user_type === 'student') {
     }
 }
 
-if ($user_type === 'staff' && empty($designation)) {
-    echo json_encode(['success' => false, 'message' => 'Designation is required for staff']);
-    exit;
-}
+// No staff validation (designation removed)
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['success' => false, 'message' => 'Invalid email address']);
+    exit;
+}
+
+// Validate college email (must end with @mcc.edu.in)
+if (!preg_match('/@mcc\.edu\.in$/', $email)) {
+    echo json_encode(['success' => false, 'message' => 'Email must be a valid college email ending with @mcc.edu.in']);
     exit;
 }
 
@@ -69,20 +88,13 @@ if ($password !== $confirm_password) {
     exit;
 }
 
-// Determine college name
-$college = ($college_type === 'mcc') ? 'Madras Christian College' : $other_college;
-
-if (empty($college)) {
-    echo json_encode(['success' => false, 'message' => 'Please enter college name']);
-    exit;
-}
 
 // Hash password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 // Generate program ID for students
 $program_id = null;
-if ($user_type === 'student' && !empty($stream) && !empty($level)) {
+if (!empty($stream) && !empty($level)) {
     // Format: STREAM-LEVEL-YEAR-RANDOM (e.g., AIDED-UG-2024-A5B3)
     $year = date('Y');
     $random = strtoupper(substr(md5(uniqid(rand(), true)), 0, 4));
@@ -108,7 +120,7 @@ $stmt->close();
 
 // Check if registration number already exists (for students)
 if ($user_type === 'student' && !empty($reg_no)) {
-    $stmt = $conn->prepare("SELECT id FROM users WHERE reg_no = ? AND user_type = 'student'");
+    $stmt = $conn->prepare("SELECT id FROM users WHERE reg_no = ?");
     $stmt->bind_param("s", $reg_no);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -122,9 +134,9 @@ if ($user_type === 'student' && !empty($reg_no)) {
     $stmt->close();
 }
 
-// Insert user into database
-$stmt = $conn->prepare("INSERT INTO users (user_type, stream, level, reg_no, program_id, name, designation, department, phone_no, email, password, college) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssssssssssss", $user_type, $stream, $level, $reg_no, $program_id, $name, $designation, $department, $phone_no, $email, $hashed_password, $college);
+// Insert user into database (college column removed)
+$stmt = $conn->prepare("INSERT INTO users (stream, level, reg_no, program_id, name, department, phone_no, email, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt->bind_param("sssssssss", $stream, $level, $reg_no, $program_id, $name, $department, $phone_no, $email, $hashed_password);
 
 if ($stmt->execute()) {
     $user_id = $stmt->insert_id;
@@ -134,13 +146,10 @@ if ($stmt->execute()) {
     $activity_type = 'account_created';
     
     // Build detailed activity description
-    if ($user_type === 'student') {
-        $stream_text = strtoupper($stream);
-        $level_text = strtoupper($level);
-        $activity_description = "New student account created: $name | Stream: $stream_text | Level: $level_text | Program ID: $program_id | Department: $department";
-    } else {
-        $activity_description = "New staff account created: $name | Designation: $designation | Department: $department";
-    }
+    // Build activity description (students only)
+    $stream_text = strtoupper($stream);
+    $level_text = strtoupper($level);
+    $activity_description = "New student account created: $name | Stream: $stream_text | Level: $level_text | Program ID: $program_id | Department: $department";
     
     $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, user_type, activity_type, activity_description, ip_address) VALUES (?, ?, ?, ?, ?)");
     $log_stmt->bind_param("issss", $user_id, $user_type, $activity_type, $activity_description, $ip_address);
@@ -157,11 +166,14 @@ if ($stmt->execute()) {
         $response['program_id'] = $program_id;
     }
     
+    // Clear output buffer and send clean JSON
+    ob_clean();
     echo json_encode($response);
 } else {
+    ob_clean();
     echo json_encode(['success' => false, 'message' => 'Registration failed. Please try again.']);
 }
 
 $stmt->close();
 $conn->close();
-?>
+ob_end_flush();

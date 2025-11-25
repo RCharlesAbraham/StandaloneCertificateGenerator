@@ -6,7 +6,7 @@ The registration system has been updated to replace the simple Student/Staff tog
 ## What Changed
 
 ### 1. **User Interface**
-- ✅ **User Type Selection**: Radio buttons for Student/Staff (previously toggle buttons)
+- ✅ **User Type Selection**: **Removed** from public UI — registration is student-only (Student accounts created via UI; Staff accounts are created/managed by Admins).
 - ✅ **Stream Selection** (Students only): 
   - Aided
   - Self-Financed Stream (SFS)
@@ -193,7 +193,7 @@ Enhanced activity logs now include:
 ### Get all Aided UG students
 ```sql
 SELECT * FROM users 
-WHERE user_type = 'student' 
+WHERE reg_no IS NOT NULL 
 AND stream = 'aided' 
 AND level = 'ug';
 ```
@@ -202,14 +202,14 @@ AND level = 'ug';
 ```sql
 SELECT stream, level, COUNT(*) as total
 FROM users 
-WHERE user_type = 'student'
+WHERE reg_no IS NOT NULL
 GROUP BY stream, level;
 ```
 
 ### Find student by program ID
 ```sql
 SELECT * FROM users 
-WHERE program_id = 'AIDED-UG-2024-A5B3';
+WHERE program_id = 'AIDED-UG-2024-A5B3' AND reg_no IS NOT NULL;
 ```
 
 ## Browser Compatibility
@@ -220,6 +220,7 @@ WHERE program_id = 'AIDED-UG-2024-A5B3';
 
 ## Notes
 - Staff members do NOT have stream/level fields (NULL in database)
+> Public registration will only create student accounts (Students will have `reg_no`), staff must be created by admins or via admin tools.
 - Program ID is only generated for students
 - Department dropdown is dynamically populated client-side
 - All department lists are hardcoded in JavaScript for performance

@@ -50,23 +50,15 @@ Ensure the following files are readable by the web server:
 ## Features
 
 ### User Registration
-- **Student Registration:**
-  - Registration Number
+- **Student Registration (public UI):**
+  - Registration Number (`reg_no`)
   - Name
   - Department
   - Phone Number
-  - College (Default: Madras Christian College or Other)
   - Email
   - Password
 
-- **Staff Registration:**
-  - Name
-  - Designation
-  - Department
-  - Phone Number
-  - College (Default: Madras Christian College or Other)
-  - Email
-  - Password
+> Note: Public registration is student-only. Staff accounts should be managed by an admin. The `college` and `designation` fields are no longer part of public registration.
 
 ### Admin Panel Features
 - Dashboard with statistics
@@ -115,9 +107,11 @@ The system automatically logs:
 
 ## API Endpoints
 
-- **URL:** `/public/actions/register_process.php`
-- **Method:** POST
-- **Parameters:** user_type, name, department, phone_no, email, password, college_type, other_college, reg_no (students), designation (staff)
+-- **URL:** `/public/actions/register_process.php`
+-- **Method:** POST
+-- **Parameters:** name, department, phone_no, email, password, reg_no (students only)
+
+> Implementation note: The backend will derive a user's role by checking `reg_no` (if present -> student). `user_type` and `college` are no longer used in DB inserts for public registration.
 
 - **URL:** `/public/admin/admin_login_process.php`
 - **Method:** POST

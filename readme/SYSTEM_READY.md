@@ -15,12 +15,11 @@ Expected Result:
 - ✅ Default admin account found
 - ✅ PHP sessions working
 
-### Step 2: Test User Registration
+### Step 2: Test User Registration (Students only)
 1. Go to: `http://localhost:3000/public/register.php`
-2. Select "Student" or "Staff"
-3. Fill in all fields
-4. Click "Create Account"
-5. Should redirect to login page
+2. Fill in the student registration fields (Reg No, Name, Department, Phone, Email, Password)
+3. Click "Create Account" → Should redirect to the login page on success
+> Note: Public registration is student-only; staff accounts are intended to be created/managed by admins.
 
 ### Step 3: Test User Login
 1. Go to: `http://localhost:3000/public/login.php`
@@ -94,8 +93,8 @@ Expected Result:
 - Redirects to index.php on success
 
 ### `public/register.php`
-- Student or Staff registration
-- College selection (MCC or Other)
+- Student registration only (public)
+> College selection has been removed from the public registration flow. All public accounts are assumed to be from Madras Christian College (MCC).
 - Password confirmation
 - Email uniqueness validation
 - Auto-login after registration

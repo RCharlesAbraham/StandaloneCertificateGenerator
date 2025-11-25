@@ -1,5 +1,7 @@
 <?php
+ob_start();
 require_once __DIR__ . '/../../includes/config.php';
+ob_end_clean();
 
 header('Content-Type: application/json');
 
@@ -38,4 +40,3 @@ $conn->close();
 session_destroy();
 
 echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
-?>

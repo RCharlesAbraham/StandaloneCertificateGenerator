@@ -1,12 +1,44 @@
 {
-    "textPlaceholders": {
-        "certNo": {
-            "x": 0.849,
-            "y": 0.121,
-            "fontSize": 25,
-            "label": "Certificate No",
-            "varName": "{{VAR2}}",
-            "dragging": false
-        }
+  "textPlaceholders": {
+    "certNo": {
+      "x": 0.849,
+      "y": 0.121,
+      "fontSize": 16,
+      "label": "Certificate No",
+      "varName": "{{VAR2}}",
+      "dragging": false
+    },
+    "name": {
+      "x": 0.663,
+      "y": 0.538,
+      "fontSize": 60,
+      "label": "Name",
+      "varName": "{{VAR1}}",
+      "dragging": false
+    },
+    "certifiedFor": {
+      "x": 0.417,
+      "y": 0.622,
+      "fontSize": 30,
+      "label": "Certified For",
+      "varName": "{{VAR3}}",
+      "dragging": false
+    },
+    "fromDate": {
+      "x": 0.734,
+      "y": 0.658,
+      "fontSize": 28,
+      "label": "From Date",
+      "varName": "{{VAR7}}",
+      "dragging": false
+    },
+    "toDate": {
+      "x": 0.891,
+      "y": 0.658,
+      "fontSize": 28,
+      "label": "To Date",
+      "varName": "{{VAR8}}",
+      "dragging": false
     }
+  }
 }

@@ -1,73 +1,78 @@
 <?php
-// Completely disable all output before we start
-ini_set('display_errors', '0');
+// Suppress all errors and warnings from output
 error_reporting(0);
+ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-// Simple output buffering
-ob_start();
+// Start output buffering with callback to ensure clean output
+ob_start(function($buffer) {
+    // Remove any whitespace or BOM before JSON
+    $buffer = trim($buffer);
+    if (substr($buffer, 0, 1) !== '{' && substr($buffer, 0, 1) !== '[') {
+        // Find where JSON actually starts
+        $jsonStart = max(strpos($buffer, '{'), strpos($buffer, '['));
+        if ($jsonStart !== false) {
+            $buffer = substr($buffer, $jsonStart);
+        }
+    }
+    return $buffer;
+});
 
-// Include config
 require_once __DIR__ . '/../../includes/config.php';
 
-// Discard any output from config
-ob_end_clean();
+// Set headers
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, must-revalidate');
 
-// Start fresh buffer
-ob_start();
-
-// Set JSON header
-header('Content-Type: application/json');
-
-// Validate request method
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die(json_encode(['success' => false, 'message' => 'Invalid request method']));
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    exit;
 }
 
-// Get and validate input
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if (empty($email) || empty($password)) {
-    http_response_code(400);
-    die(json_encode(['success' => false, 'message' => 'Please enter email and password']));
+    echo json_encode(['success' => false, 'message' => 'Please enter email and password']);
+    exit;
 }
 
-// Database operations
 $conn = getDBConnection();
 
+// Check user credentials
 $stmt = $conn->prepare("SELECT id, name, email, password, status, reg_no FROM users WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
+    ob_clean();
+if ($result->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
     $stmt->close();
     $conn->close();
-    http_response_code(401);
-    die(json_encode(['success' => false, 'message' => 'Invalid email or password']));
+    exit;
 }
 
 $user = $result->fetch_assoc();
 $stmt->close();
 
+// Check if account is active
 if ($user['status'] !== 'active') {
+// Check if account is active
+if ($user['status'] !== 'active') {
+    echo json_encode(['success' => false, 'message' => 'Your account is inactive. Please contact administrator.']);
     $conn->close();
-    http_response_code(403);
-    die(json_encode(['success' => false, 'message' => 'Your account is inactive. Please contact administrator.']));
-}
-
+    exit;
+}/ Verify password
 if (!password_verify($password, $user['password'])) {
+// Verify password
+if (!password_verify($password, $user['password'])) {
+    echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
     $conn->close();
-    http_response_code(401);
-    die(json_encode(['success' => false, 'message' => 'Invalid email or password']));
-}
-
-// Login successful - update database
+    exit;
+}/ Update last login
 $user_id = $user['id'];
-
-// Update last login
 $stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -77,10 +82,10 @@ $stmt->close();
 $session_token = bin2hex(random_bytes(32));
 $ip_address = $_SERVER['REMOTE_ADDR'];
 $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-$user_type = (!empty($user['reg_no'])) ? 'student' : 'staff';
 
-// Insert session
 $stmt = $conn->prepare("INSERT INTO user_sessions (user_id, user_type, session_token, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
+// Derive user_type from reg_no/designation
+$user_type = (!empty($user['reg_no'])) ? 'student' : 'staff';
 $stmt->bind_param("issss", $user_id, $user_type, $session_token, $ip_address, $user_agent);
 $stmt->execute();
 $stmt->close();
@@ -88,31 +93,33 @@ $stmt->close();
 // Log activity
 $activity_type = 'login';
 $activity_description = "User logged in: {$user['name']}";
+
 $log_stmt = $conn->prepare("INSERT INTO activity_logs (user_id, user_type, activity_type, activity_description, ip_address) VALUES (?, ?, ?, ?, ?)");
 $log_stmt->bind_param("issss", $user_id, $user_type, $activity_type, $activity_description, $ip_address);
 $log_stmt->execute();
 $log_stmt->close();
 
-// Close database connection
-$conn->close();
-
-// Set session variables
+// Store session
 $_SESSION['user_id'] = $user['id'];
 $_SESSION['user_type'] = $user_type;
 $_SESSION['user_name'] = $user['name'];
 $_SESSION['user_email'] = $user['email'];
 $_SESSION['session_token'] = $session_token;
 
-// Prepare response
-$response = [
+// Close connection before output
+$conn->close();
+
+// Clear output buffer and send clean JSON
+// Close connection before output
+$conn->close();
+
+// Send JSON response
+echo json_encode([
     'success' => true,
     'message' => 'Login successful',
     'user_id' => $user['id'],
     'user_type' => $user_type,
     'name' => $user['name'],
     'email' => $user['email']
-];
-
-// Output JSON and flush
-echo json_encode($response);
-ob_end_flush();
+]);
+exit;
