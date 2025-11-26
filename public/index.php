@@ -10,6 +10,24 @@ if (!isset($_SESSION['user_id'])) {
 $user_name = $_SESSION['user_name'] ?? 'User';
 $user_email = $_SESSION['user_email'] ?? '';
 $user_type = $_SESSION['user_type'] ?? '';
+
+// Fetch additional user details for account modal
+$user_phone = '';
+$user_regno = '';
+if (isset($_SESSION['user_id'])) {
+    $conn = getDBConnection();
+    $user_id = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT phone_no, reg_no FROM users WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $user_phone = $row['phone_no'] ?? '';
+        $user_regno = $row['reg_no'] ?? '';
+    }
+    $stmt->close();
+    $conn->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,11 +192,96 @@ $user_type = $_SESSION['user_type'] ?? '';
     </div>
 
     <!-- Top Navigation Bar -->
+    <!-- Help Modal (compact) -->
+    <div id="helpModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h3 style="margin:0;">How this app works</h3>
+                <button class="modal-close" id="helpClose" style="font-size:20px;">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size:13px; color:#444; line-height:1.45; padding-top:8px;">
+                <div style="margin-bottom:6px;"><strong>Move:</strong> Click and drag any placeholder.</div>
+                <div style="margin-bottom:6px;"><strong>Edit:</strong> Double-click text to open editor.</div>
+                <div style="margin-bottom:6px;"><strong>Delete:</strong> Select element and press Delete/Backspace.</div>
+                <div style="margin-bottom:6px;"><strong>Zoom:</strong> Use mouse wheel while pressing Ctrl, or use Ctrl + +/- keys.</div>
+                <div style="margin-bottom:6px;"><strong>Grid:</strong> Toggle grid from the canvas toolbar when needed.</div>
+                <div style="margin-top:8px; color:#666; font-size:12px;">Tip: use the Generate button to export a single certificate or upload an Excel for bulk generation.</div>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                <button id="helpGotIt" class="btn btn-primary">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Details Modal -->
+    <div id="accountModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
+                <h3 style="margin:0;">Account Details</h3>
+                <button class="modal-close" id="accountClose" style="font-size:20px;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <!-- Non-editable fields -->
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size:13px; font-weight:600; color:#67150a; margin-bottom:6px; display:block;">Name</label>
+                    <input type="text" id="accountName" readonly style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:6px; background:#f5f5f5; color:#666; font-size:14px; cursor:not-allowed;">
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size:13px; font-weight:600; color:#67150a; margin-bottom:6px; display:block;">College Email</label>
+                    <input type="text" id="accountEmail" readonly style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:6px; background:#f5f5f5; color:#666; font-size:14px; cursor:not-allowed;">
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="font-size:13px; font-weight:600; color:#67150a; margin-bottom:6px; display:block;">Phone Number</label>
+                    <input type="text" id="accountPhone" readonly style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:6px; background:#f5f5f5; color:#666; font-size:14px; cursor:not-allowed;">
+                </div>
+
+                <div class="form-group" id="accountRegNoGroup" style="margin-bottom:16px; display:none;">
+                    <label style="font-size:13px; font-weight:600; color:#67150a; margin-bottom:6px; display:block;">Registration Number</label>
+                    <input type="text" id="accountRegNo" readonly style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:6px; background:#f5f5f5; color:#666; font-size:14px; cursor:not-allowed;">
+                </div>
+
+                <div class="divider" style="height:1px; background:#e0e0e0; margin:20px 0;"></div>
+
+                <!-- Password change section -->
+                <div style="margin-bottom:16px;">
+                    <h4 style="font-size:14px; font-weight:600; color:#67150a; margin-bottom:12px;">Change Password</h4>
+                    
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="currentPassword" style="font-size:13px; font-weight:500; color:#333; margin-bottom:6px; display:block;">Current Password</label>
+                        <input type="password" id="currentPassword" placeholder="Enter current password" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:14px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="newPassword" style="font-size:13px; font-weight:500; color:#333; margin-bottom:6px; display:block;">New Password</label>
+                        <input type="password" id="newPassword" placeholder="Enter new password" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:14px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="confirmPassword" style="font-size:13px; font-weight:500; color:#333; margin-bottom:6px; display:block;">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirm new password" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:14px;">
+                    </div>
+
+                    <div id="passwordMessage" style="display:none; padding:10px; border-radius:6px; font-size:13px; margin-top:10px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+                <button id="accountCancelBtn" class="btn btn-secondary">Cancel</button>
+                <button id="changePasswordBtn" class="btn btn-primary">Change Password</button>
+            </div>
+        </div>
+    </div>
+
     <nav class="top-navbar">
         <div class="navbar-brand">
             <div class="logo-placeholder" title="Click to change logo" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                 <label for="logoUpload" style="display:inline-block; margin:0;">
-                    <img id="logoImg" src="assets/MMC-LOGO-2-229x300.jpg" alt="Logo placeholder" width="36" height="36"
+                    <img id="logoImg" src="assets/MMC-LOGO-2-229x300.png" alt="Logo placeholder" width="36" height="36"
                          style="object-fit:contain; border-radius:4px; transform:translateY(4px);">
                 </label>
                 <input type="file" id="logoUpload" accept="image/*" style="display:none;">
@@ -329,34 +432,81 @@ $user_type = $_SESSION['user_type'] ?? '';
                         Signature Images
                     </h3>
                     <p style="font-size:11px; color:#666; margin-bottom:10px; line-height:1.4;">
-                        Upload PNG signature images. Drag to position, use corner handle to resize. Images will appear based on signature layout (single/double/triple).
+                        Upload PNG signature images. Click "+" to add more (up to 5).
                     </p>
                     
-                    <div style="display:flex; gap:12px; align-items:flex-start;">
-                        <div class="form-group" style="flex:1; margin-bottom:0;">
-                            <label for="signature1Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 1 - Left:</label>
-                            <input type="file" id="signature1Upload" accept="image/png" style="width:100%; font-size:11px;">
-                            <span id="sig1Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                    <!-- Signature inputs in vertical order with remove buttons -->
+                    <div id="signaturesContainer" style="display:flex; flex-direction:column; gap:10px;">
+                        <!-- Signature 1 - always visible, no remove button -->
+                        <div class="form-group" style="margin-bottom:0; display:flex; gap:8px; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <label for="signature1Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 1:</label>
+                                <input type="file" id="signature1Upload" accept="image/png" style="width:100%; font-size:11px;">
+                                <span id="sig1Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="flex:1; margin-bottom:0;">
-                            <label for="signature2Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 2 - Center:</label>
-                            <input type="file" id="signature2Upload" accept="image/png" style="width:100%; font-size:11px;">
-                            <span id="sig2Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                        <!-- Signature 2 - hidden by default -->
+                        <div class="form-group" id="sig2Group" style="margin-bottom:0; display:none; gap:8px; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <label for="signature2Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 2:</label>
+                                <input type="file" id="signature2Upload" accept="image/png" style="width:100%; font-size:11px;">
+                                <span id="sig2Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                            </div>
+                            <button type="button" class="btn btn-secondary remove-sig-btn" data-sig="2" title="Remove signature 2" style="padding:6px 10px; height:36px; margin-top:18px; background:#d32f2f; color:white; border-color:#d32f2f;">
+                                <strong>−</strong>
+                            </button>
                         </div>
 
-                        <div class="form-group" style="flex:1; margin-bottom:0;">
-                            <label for="signature3Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 3 - Right:</label>
-                            <input type="file" id="signature3Upload" accept="image/png" style="width:100%; font-size:11px;">
-                            <span id="sig3Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                        <!-- Signature 3 - hidden by default -->
+                        <div class="form-group" id="sig3Group" style="margin-bottom:0; display:none; gap:8px; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <label for="signature3Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 3:</label>
+                                <input type="file" id="signature3Upload" accept="image/png" style="width:100%; font-size:11px;">
+                                <span id="sig3Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                            </div>
+                            <button type="button" class="btn btn-secondary remove-sig-btn" data-sig="3" title="Remove signature 3" style="padding:6px 10px; height:36px; margin-top:18px; background:#d32f2f; color:white; border-color:#d32f2f;">
+                                <strong>−</strong>
+                            </button>
                         </div>
+
+                        <!-- Signature 4 - hidden by default -->
+                        <div class="form-group" id="sig4Group" style="margin-bottom:0; display:none; gap:8px; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <label for="signature4Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 4:</label>
+                                <input type="file" id="signature4Upload" accept="image/png" style="width:100%; font-size:11px;">
+                                <span id="sig4Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                            </div>
+                            <button type="button" class="btn btn-secondary remove-sig-btn" data-sig="4" title="Remove signature 4" style="padding:6px 10px; height:36px; margin-top:18px; background:#d32f2f; color:white; border-color:#d32f2f;">
+                                <strong>−</strong>
+                            </button>
+                        </div>
+
+                        <!-- Signature 5 - hidden by default -->
+                        <div class="form-group" id="sig5Group" style="margin-bottom:0; display:none; gap:8px; align-items:flex-start;">
+                            <div style="flex:1;">
+                                <label for="signature5Upload" style="font-size:11px; display:block; margin-bottom:4px;">Signature 5:</label>
+                                <input type="file" id="signature5Upload" accept="image/png" style="width:100%; font-size:11px;">
+                                <span id="sig5Preview" style="font-size:10px; color:#666; display:block; margin-top:2px;"></span>
+                            </div>
+                            <button type="button" class="btn btn-secondary remove-sig-btn" data-sig="5" title="Remove signature 5" style="padding:6px 10px; height:36px; margin-top:18px; background:#d32f2f; color:white; border-color:#d32f2f;">
+                                <strong>−</strong>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Add button -->
+                    <div style="margin-top:10px;">
+                        <button id="addSignatureBtn" type="button" class="btn btn-secondary" title="Add signature" style="padding:6px 12px;">
+                            <strong>＋</strong> Add Signature
+                        </button>
                     </div>
                 </div>
 
                 <div class="divider"></div>
 
 
-                <div class="bulk-data-section compact" style="padding:8px 0; margin-bottom:6px;">
+                <div class="bulk-data-section compact" style="padding:10px 10px; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -366,10 +516,10 @@ $user_type = $_SESSION['user_type'] ?? '';
                         <h3 style="font-size:12px; font-weight:600; color:#67150a; margin:0;">For Bulk Data</h3>
                     </div>
 
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <div class="bulk-buttons">
                         <a href="Demo Excel/Excel_Blueprint.xlsx" download="Excel_Blueprint.xlsx"
                            class="btn btn-secondary"
-                           style="padding:6px 8px; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                           style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="7 10 12 15 17 10" />
@@ -378,9 +528,9 @@ $user_type = $_SESSION['user_type'] ?? '';
                             Template
                         </a>
 
-                        <label for="excelFile"
+                           <label for="excelFile"
                                class="btn btn-secondary"
-                               style="padding:6px 8px; font-size:12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                               style="display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="17 8 12 3 7 8" />
@@ -389,12 +539,11 @@ $user_type = $_SESSION['user_type'] ?? '';
                             Choose Excel To Upload Data
                         </label>
                         <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;">
-                        <span id="excel-name" class="file-name"
-                              style="font-size:12px; color:#444; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <span id="excel-name" class="file-name excel-name">
                         </span>
 
-                        <button id="generateAllBtn" class="btn btn-primary"
-                                style="padding:6px 8px; font-size:12px; margin-left:auto; display:none;">
+                        <button id="generateAllBtn" class="btn btn-primary generate-btn"
+                            style="display:none;">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                 <polyline points="14 2 14 8 20 8" />
@@ -416,47 +565,27 @@ $user_type = $_SESSION['user_type'] ?? '';
 
                 <div class="divider"></div>
 
-                <div class="instructions-section"
-                    style="padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
-                    <h3 style="font-size: 13px; font-weight: 600; color: #67150a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <!-- Replaced large Canvas Controls block with a compact Help button + modal -->
+                <div class="instructions-section controls-compact">
+                    <div class="controls-left">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        Canvas Controls
-                    </h3>
-                    <div style="font-size: 11px; color: #555; line-height: 1.5; margin-bottom: 10px;">
-                        <div style="margin-bottom: 4px;"><strong>Move:</strong> Click and drag any placeholder</div>
-                        <div style="margin-bottom: 4px;"><strong>Edit:</strong> Double-click text to open editor</div>
-                        <div style="margin-bottom: 4px;"><strong>Delete:</strong> Select element and press Delete/Backspace key</div>
-                        <div style="margin-bottom: 4px;"><strong>Zoom:</strong> Mouse wheel + Ctrl, or Ctrl + Plus/Minus keys</div>
-                        <div style="margin-bottom: 4px;"><strong>Grid:</strong> Shows percentage markers for alignment</div>
-                        <div><strong>Tip:</strong> Select unwanted placeholders and press Delete!</div>
+                        <div style="font-size:13px; font-weight:600; color:#67150a;">Controls</div>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button id="toggleGrid" class="btn btn-secondary" style="flex: 1;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <rect x="3" y="3" width="7" height="7" />
-                                <rect x="14" y="3" width="7" height="7" />
-                                <rect x="14" y="14" width="7" height="7" />
-                                <rect x="3" y="14" width="7" height="7" />
+
+                    <div>
+                        <button id="openHelpBtn" class="btn btn-secondary help-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 1 1 5.83 1c0 1.5-2 2.25-2 2.25"></path>
+                                <line x1="12" y1="17" x2="12" y2="17"></line>
                             </svg>
-                            Grid
-                        </button>
-                        <button id="deleteSelected" class="btn btn-secondary" style="flex: 1; background: #d32f2f; color: white; border-color: #d32f2f;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                            Delete
+                            Help
                         </button>
                     </div>
-                    <button id="copyPositions" class="btn btn-secondary" style="display:none !important;" aria-hidden="true" tabindex="-1"></button>
                 </div>
             </div>
         </div>
@@ -516,8 +645,6 @@ $user_type = $_SESSION['user_type'] ?? '';
                 </div>
             </div>
             <div class="canvas-container" id="canvasContainer">
-                <div style="font-size: 12px; color: #666; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 8px; border-left: 3px solid #00a8ff;">
-                </div>
                 <canvas id="certificateCanvas"></canvas>
             </div>
         </div>
@@ -531,9 +658,124 @@ $user_type = $_SESSION['user_type'] ?? '';
         sessionStorage.setItem('userType', '<?php echo $user_type; ?>');
         sessionStorage.setItem('userEmail', '<?php echo addslashes($user_email); ?>');
     </script>
+    <script>
+        // Help modal open/close handlers
+        (function(){
+            function $(id){ return document.getElementById(id); }
+            var openBtn = $('openHelpBtn');
+            var helpModal = $('helpModal');
+            var helpClose = $('helpClose');
+            var helpGotIt = $('helpGotIt');
+
+            function centerAndShowModal(modal){
+                if (!modal) return;
+                modal.style.display = 'flex';
+                // ensure content is absolutely positioned for dragging
+                var content = modal.querySelector('.modal-content');
+                if (content) {
+                    content.style.position = 'absolute';
+                    // center it
+                    var left = Math.max((window.innerWidth - content.offsetWidth) / 2, 20);
+                    var top = Math.max((window.innerHeight - content.offsetHeight) / 2, 20);
+                    content.style.left = left + 'px';
+                    content.style.top = top + 'px';
+                }
+            }
+
+            function hideModal(modal){ if (!modal) return; modal.style.display = 'none'; }
+
+            if (openBtn){ openBtn.addEventListener('click', function(){ centerAndShowModal(helpModal); }); }
+            if (helpClose){ helpClose.addEventListener('click', function(){ hideModal(helpModal); }); }
+            if (helpGotIt){ helpGotIt.addEventListener('click', function(){ hideModal(helpModal); }); }
+
+            // close on overlay click
+            if (helpModal){ helpModal.addEventListener('click', function(e){ if (e.target === helpModal) hideModal(helpModal); }); }
+
+            // Make modal draggable by its header
+            function makeModalDraggable(modal){
+                if (!modal) return;
+                var content = modal.querySelector('.modal-content');
+                if (!content) return;
+                var header = content.querySelector('.modal-header');
+                if (!header) header = content;
+
+                var isDragging = false;
+                var startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+                header.style.cursor = 'move';
+
+                header.addEventListener('mousedown', function(e){
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    origLeft = parseInt(content.style.left || 0, 10);
+                    origTop = parseInt(content.style.top || 0, 10);
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                    e.preventDefault();
+                });
+
+                function onMouseMove(e){
+                    if (!isDragging) return;
+                    var dx = e.clientX - startX;
+                    var dy = e.clientY - startY;
+                    content.style.left = Math.max(origLeft + dx, 10) + 'px';
+                    content.style.top = Math.max(origTop + dy, 10) + 'px';
+                }
+
+                function onMouseUp(){
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+
+                // Touch support
+                header.addEventListener('touchstart', function(e){
+                    isDragging = true;
+                    var t = e.touches[0];
+                    startX = t.clientX;
+                    startY = t.clientY;
+                    origLeft = parseInt(content.style.left || 0, 10);
+                    origTop = parseInt(content.style.top || 0, 10);
+                    document.addEventListener('touchmove', onTouchMove);
+                    document.addEventListener('touchend', onTouchEnd);
+                    e.preventDefault();
+                });
+
+                function onTouchMove(e){
+                    if (!isDragging) return;
+                    var t = e.touches[0];
+                    var dx = t.clientX - startX;
+                    var dy = t.clientY - startY;
+                    content.style.left = Math.max(origLeft + dx, 10) + 'px';
+                    content.style.top = Math.max(origTop + dy, 10) + 'px';
+                }
+
+                function onTouchEnd(){
+                    isDragging = false;
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                }
+            }
+
+            // Initialize draggable for help and account modals
+            makeModalDraggable(helpModal);
+            var accountModal = document.getElementById('accountModal');
+            makeModalDraggable(accountModal);
+        })();
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // Embed PHP user data for JavaScript access
+        window.userData = {
+            name: <?php echo json_encode($user_name); ?>,
+            email: <?php echo json_encode($user_email); ?>,
+            phone: <?php echo json_encode($user_phone); ?>,
+            regno: <?php echo json_encode($user_regno); ?>
+        };
+    </script>
     <script src="script.js"></script>
 </body>
 

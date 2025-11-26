@@ -531,6 +531,14 @@ const renderCertificate = () => {
         drawSignatureImage(signatures.sigRight, textPlaceholders.sigRightImage);
     }
 
+    // Additional signatures if provided (4 and 5)
+    if (signatures.sig4 && textPlaceholders.sig4Image) {
+        drawSignatureImage(signatures.sig4, textPlaceholders.sig4Image);
+    }
+    if (signatures.sig5 && textPlaceholders.sig5Image) {
+        drawSignatureImage(signatures.sig5, textPlaceholders.sig5Image);
+    }
+
     // Draw signature details (names, titles, orgs)
     const drawSignatureDetails = (nameKey, titleKey, orgKey) => {
         if (textPlaceholders[nameKey]) {
@@ -1239,6 +1247,84 @@ if (toDateFontSizeInput) {
 const signature1Upload = document.getElementById('signature1Upload');
 const signature2Upload = document.getElementById('signature2Upload');
 const signature3Upload = document.getElementById('signature3Upload');
+const signature4Upload = document.getElementById('signature4Upload');
+const signature5Upload = document.getElementById('signature5Upload');
+
+// Add-signature button to reveal more inputs progressively (up to 5)
+const addSignatureBtn = document.getElementById('addSignatureBtn');
+let visibleSignatures = 1; // currently only signature1 shown
+const maxSignatures = 5;
+
+if (addSignatureBtn) {
+    addSignatureBtn.addEventListener('click', () => {
+        // Show next hidden signature input
+        if (visibleSignatures < maxSignatures) {
+            visibleSignatures++;
+            const groupId = `sig${visibleSignatures}Group`;
+            const grp = document.getElementById(groupId);
+            if (grp) {
+                grp.style.display = 'flex'; // show as flex to align with remove button
+            }
+        }
+
+        // If we've reached max, hide the add button
+        if (visibleSignatures >= maxSignatures) {
+            addSignatureBtn.style.display = 'none';
+        }
+    });
+}
+
+// Remove signature functionality
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.remove-sig-btn')) {
+        const btn = e.target.closest('.remove-sig-btn');
+        const sigNum = btn.dataset.sig;
+        const groupId = `sig${sigNum}Group`;
+        const group = document.getElementById(groupId);
+        
+        if (group) {
+            // Hide the group
+            group.style.display = 'none';
+            
+            // Clear the file input and preview
+            const fileInput = document.getElementById(`signature${sigNum}Upload`);
+            const preview = document.getElementById(`sig${sigNum}Preview`);
+            if (fileInput) fileInput.value = '';
+            if (preview) {
+                preview.textContent = '';
+                preview.style.color = '#666';
+            }
+            
+            // Clear the signature from memory
+            if (sigNum === '1') signatures.sigLeft = null;
+            else if (sigNum === '2') signatures.sigCenter = null;
+            else if (sigNum === '3') signatures.sigRight = null;
+            else if (sigNum === '4') signatures.sig4 = null;
+            else if (sigNum === '5') signatures.sig5 = null;
+            
+            // Clear placeholder
+            const placeholderKey = sigNum === '1' ? 'sigLeftImage' : 
+                                   sigNum === '2' ? 'sigCenterImage' : 
+                                   sigNum === '3' ? 'sigRightImage' : 
+                                   sigNum === '4' ? 'sig4Image' : 'sig5Image';
+            if (textPlaceholders[placeholderKey]) {
+                delete textPlaceholders[placeholderKey];
+            }
+            
+            // Update visible count
+            visibleSignatures--;
+            
+            // Show add button if under max
+            if (visibleSignatures < maxSignatures && addSignatureBtn) {
+                addSignatureBtn.style.display = 'inline-flex';
+            }
+            
+            // Save and re-render
+            saveConfig();
+            renderCertificate();
+        }
+    }
+});
 
 // Helper: choose signature layout that displays the most uploaded images
 function updateSignatureLayoutAfterUpload() {
@@ -1345,6 +1431,69 @@ if (signature3Upload) {
                     saveConfig();
                     document.getElementById('sig3Preview').textContent = '✓ ' + file.name;
                     document.getElementById('sig3Preview').style.color = '#4CAF50';
+                    renderCertificate();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Please select a PNG image file.');
+        }
+    });
+}
+
+// Extra signature handlers (4 and 5)
+if (signature4Upload) {
+    signature4Upload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'image/png') {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Store as signature 4
+                    signatures.sig4 = img;
+                    if (!textPlaceholders.sig4Image) {
+                        // default position: slightly left of center-right
+                        textPlaceholders.sig4Image = { x: 0.35, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Signature 4', dragging: false };
+                    }
+                    saveConfig();
+                    const preview = document.getElementById('sig4Preview');
+                    if (preview) {
+                        preview.textContent = '✓ ' + file.name;
+                        preview.style.color = '#4CAF50';
+                    }
+                    renderCertificate();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Please select a PNG image file.');
+        }
+    });
+}
+
+if (signature5Upload) {
+    signature5Upload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'image/png') {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Store as signature 5
+                    signatures.sig5 = img;
+                    if (!textPlaceholders.sig5Image) {
+                        // default position: slightly right of center-left
+                        textPlaceholders.sig5Image = { x: 0.65, y: 0.78, scale: 1.0, type: 'signatureImage', label: 'Signature 5', dragging: false };
+                    }
+                    saveConfig();
+                    const preview = document.getElementById('sig5Preview');
+                    if (preview) {
+                        preview.textContent = '✓ ' + file.name;
+                        preview.style.color = '#4CAF50';
+                    }
                     renderCertificate();
                 };
                 img.src = event.target.result;
@@ -1728,11 +1877,11 @@ if (canvas) {
                 const dx = Math.abs(mouseX - px);
                 const dy = Math.abs(mouseY - py);
 
-                // Dynamic hit detection area based on element type
-                let hitArea = 100; // default for images
+                // Dynamic hit detection area based on element type - REDUCED for better precision
+                let hitArea = 40; // reduced from 100 for images
                 if (placeholder.fontSize) {
-                    // For text, scale hit area based on font size
-                    hitArea = Math.max(50, placeholder.fontSize * 3);
+                    // For text, scale hit area based on font size - reduced multiplier
+                    hitArea = Math.max(20, placeholder.fontSize * 1.2);
                 }
 
                 if (dx < hitArea && dy < hitArea) {
@@ -2555,54 +2704,7 @@ const hideProgressModal = () => {
     }
 };
 
-// Signature management
-let activeSignatures = 1; // Start with 1 signature
-const maxSignatures = 3;
-const addSignatureBtn = document.getElementById('addSignatureBtn');
-
-// Add signature function
-if (addSignatureBtn) {
-    addSignatureBtn.addEventListener('click', () => {
-        if (activeSignatures < maxSignatures) {
-            activeSignatures++;
-            document.getElementById(`sig${activeSignatures}Section`).style.display = 'block';
-
-            if (activeSignatures === maxSignatures) {
-                addSignatureBtn.style.display = 'none';
-            }
-
-            renderCertificate();
-            showModal(`Signature ${activeSignatures} section added!`, 'Signature Added', 'success');
-        }
-    });
-}
-
-// Remove signature function (global so it can be called from HTML)
-window.removeSignature = (sigNum) => {
-    const section = document.getElementById(`sig${sigNum}Section`);
-    section.style.display = 'none';
-
-    // Clear the inputs
-    document.getElementById(`sig${sigNum}`).value = '';
-    document.getElementById(`sig${sigNum}-name`).textContent = '';
-    document.getElementById(`sig${sigNum}Name`).value = '';
-    document.getElementById(`sig${sigNum}Title`).value = '';
-    document.getElementById(`sig${sigNum}Org`).value = '';
-
-    // Clear signature image
-    signatures[`sig${sigNum}`] = null;
-
-    // Update active count
-    activeSignatures = Math.max(1, activeSignatures - 1);
-
-    // Show add button if under max
-    if (activeSignatures < maxSignatures) {
-        addSignatureBtn.style.display = 'flex';
-    }
-
-    renderCertificate();
-    showModal(`Signature ${sigNum} removed.`, 'Signature Removed', 'info');
-};
+// Old signature management code removed - now using progressive reveal system above
 
 // Custom text fields management
 let customTextFields = [];
@@ -2729,16 +2831,40 @@ if (userInfo && dropdownMenu && userName && logoutBtn && accountDetailsBtn) {
     });
 
     // Account Details
-    accountDetailsBtn.addEventListener('click', async () => {
-        const name = sessionStorage.getItem('userName') || 'User';
-        const email = sessionStorage.getItem('userEmail');
-        const userType = sessionStorage.getItem('userType');
-
-        let message = `Name: ${name}`;
-        if (email) message += `\nEmail: ${email}`;
-        if (userType) message += `\nType: ${userType}`;
-
-        await showModal(message, 'Account Details', 'info');
+    accountDetailsBtn.addEventListener('click', () => {
+        // Populate fields from window.userData (embedded by PHP)
+        document.getElementById('accountName').value = window.userData.name || '';
+        document.getElementById('accountEmail').value = window.userData.email || '';
+        document.getElementById('accountPhone').value = window.userData.phone || '';
+        document.getElementById('accountRegNo').value = window.userData.regno || '';
+        
+        // Show/hide registration number field based on whether it exists
+        const regNoGroup = document.getElementById('accountRegNoGroup');
+        if (window.userData.regno) {
+            regNoGroup.style.display = 'block';
+        } else {
+            regNoGroup.style.display = 'none';
+        }
+        
+        // Clear password fields
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('passwordMessage').style.display = 'none';
+        
+        // Show modal (centered)
+        var _accountModal = document.getElementById('accountModal');
+        var _acctContent = _accountModal.querySelector('.modal-content');
+        if (_acctContent) {
+            _acctContent.style.position = 'absolute';
+            var left = Math.max((window.innerWidth - _acctContent.offsetWidth) / 2, 20);
+            var top = Math.max((window.innerHeight - _acctContent.offsetHeight) / 2, 20);
+            _acctContent.style.left = left + 'px';
+            _acctContent.style.top = top + 'px';
+        }
+        _accountModal.style.display = 'flex';
+        
+        // Close dropdown
         dropdownMenu.classList.remove('active');
         userInfo.classList.remove('active');
     });
@@ -2749,7 +2875,7 @@ if (userInfo && dropdownMenu && userName && logoutBtn && accountDetailsBtn) {
         if (confirmed) {
             // Call logout API
             try {
-                await fetch('logout.php', { method: 'POST' });
+                await fetch('actions/logout.php', { method: 'POST' });
             } catch (error) {
                 console.error('Logout error:', error);
             }
@@ -2764,6 +2890,124 @@ if (userInfo && dropdownMenu && userName && logoutBtn && accountDetailsBtn) {
             showModal('Logged out successfully!', 'Logout', 'success').then(() => {
                 window.location.href = 'login.php';
             });
+        }
+    });
+
+    // Account Modal handlers
+    const accountModal = document.getElementById('accountModal');
+    const accountClose = document.getElementById('accountClose');
+    const accountCancelBtn = document.getElementById('accountCancelBtn');
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+    // Close account modal
+    accountClose.addEventListener('click', () => {
+        accountModal.style.display = 'none';
+    });
+
+    accountCancelBtn.addEventListener('click', () => {
+        accountModal.style.display = 'none';
+    });
+
+    // Close when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === accountModal) {
+            accountModal.style.display = 'none';
+        }
+    });
+
+    // Change password handler
+    changePasswordBtn.addEventListener('click', async () => {
+        const currentPassword = document.getElementById('currentPassword').value.trim();
+        const newPassword = document.getElementById('newPassword').value.trim();
+        const confirmPassword = document.getElementById('confirmPassword').value.trim();
+        const passwordMessage = document.getElementById('passwordMessage');
+
+        // Reset message
+        passwordMessage.style.display = 'none';
+
+        // Validation
+        if (!currentPassword) {
+            passwordMessage.textContent = 'Please enter your current password';
+            passwordMessage.style.background = '#fee';
+            passwordMessage.style.color = '#c00';
+            passwordMessage.style.display = 'block';
+            return;
+        }
+
+        if (!newPassword) {
+            passwordMessage.textContent = 'Please enter a new password';
+            passwordMessage.style.background = '#fee';
+            passwordMessage.style.color = '#c00';
+            passwordMessage.style.display = 'block';
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            passwordMessage.textContent = 'New password must be at least 6 characters';
+            passwordMessage.style.background = '#fee';
+            passwordMessage.style.color = '#c00';
+            passwordMessage.style.display = 'block';
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            passwordMessage.textContent = 'New passwords do not match';
+            passwordMessage.style.background = '#fee';
+            passwordMessage.style.color = '#c00';
+            passwordMessage.style.display = 'block';
+            return;
+        }
+
+        // Disable button
+        changePasswordBtn.disabled = true;
+        changePasswordBtn.textContent = 'Changing...';
+
+        try {
+            const response = await fetch('actions/update_password.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                passwordMessage.textContent = 'Password changed successfully!';
+                passwordMessage.style.background = '#efe';
+                passwordMessage.style.color = '#070';
+                passwordMessage.style.display = 'block';
+
+                // Clear fields
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+
+                // Close modal after 2 seconds
+                setTimeout(() => {
+                    accountModal.style.display = 'none';
+                }, 2000);
+            } else {
+                passwordMessage.textContent = data.message || 'Failed to change password';
+                passwordMessage.style.background = '#fee';
+                passwordMessage.style.color = '#c00';
+                passwordMessage.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Password change error:', error);
+            passwordMessage.textContent = 'An error occurred. Please try again.';
+            passwordMessage.style.background = '#fee';
+            passwordMessage.style.color = '#c00';
+            passwordMessage.style.display = 'block';
+        } finally {
+            // Re-enable button
+            changePasswordBtn.disabled = false;
+            changePasswordBtn.textContent = 'Change Password';
         }
     });
 }

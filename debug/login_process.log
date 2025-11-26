@@ -1,0 +1,13 @@
+[2025-11-25 03:21:58] debug_test write
+[2025-11-25 08:52:54] Login process exception: Unknown column 'last_login' in 'field list'
+Stack trace: #0 C:\laragon\www\StandaloneCertificateGenerator\public\actions\login_process.php(101): mysqli->prepare('UPDATE users SE...')
+#1 {main}
+POST: {"email":"demo@mcc.edu.in","password":"111111"}
+SERVER: {"HTTP_USER_AGENT":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/142.0.0.0 Safari\/537.36 Edg\/142.0.0.0","REMOTE_ADDR":"127.0.0.1","REQUEST_METHOD":"POST","REQUEST_URI":"\/StandaloneCertificateGenerator\/public\/actions\/login_process.php"}
+
+[2025-11-25 08:56:25] Login process exception: Unknown column 'last_login' in 'field list'
+Stack trace: #0 C:\laragon\www\StandaloneCertificateGenerator\public\actions\login_process.php(101): mysqli->prepare('UPDATE users SE...')
+#1 {main}
+POST: {"email":"demo@mcc.edu.in","password":"111111"}
+SERVER: {"HTTP_USER_AGENT":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/142.0.0.0 Safari\/537.36 Edg\/142.0.0.0","REMOTE_ADDR":"127.0.0.1","REQUEST_METHOD":"POST","REQUEST_URI":"\/StandaloneCertificateGenerator\/public\/actions\/login_process.php"}
+
