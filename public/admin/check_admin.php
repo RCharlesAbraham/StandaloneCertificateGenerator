@@ -1,6 +1,6 @@
 <?php
 // Admin Account Verification and Setup Script - migrated
-require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../../includes/config.php';
 
 echo "<h1>Admin Account Verification</h1>";
 echo "<style>body{font-family:Arial;padding:20px;} .success{color:green;} .error{color:red;} .info{color:blue;} code{background:#f4f4f4;padding:2px 6px;border-radius:3px;}</style>";

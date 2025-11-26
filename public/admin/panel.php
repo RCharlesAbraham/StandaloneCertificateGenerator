@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../../includes/config.php';
 
 // Check if admin is authenticated
 if (!isset($_SESSION['admin_id'])) {

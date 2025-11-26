@@ -109,9 +109,15 @@ if (isset($_SESSION['user_id'])) {
                     body: formData
                 });
 
-                const data = await response.json();
+                const text = await response.text();
+                let data = null;
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    console.error('Failed to parse JSON response:', text);
+                }
 
-                if (data.success) {
+                if (response.ok && data && data.success) {
                     // Store session data
                     sessionStorage.setItem('isAuthenticated', 'true');
                     sessionStorage.setItem('userId', data.user_id);
@@ -129,7 +135,8 @@ if (isset($_SESSION['user_id'])) {
                         window.location.href = 'index.php';
                     }, 1500);
                 } else {
-                    showModal(data.message || 'Login failed', 'Error');
+                    const msg = (data && data.message) ? data.message : (`Login failed (status ${response.status})`);
+                    showModal(msg, 'Error');
                 }
             } catch (error) {
                 console.error('Login error:', error);
