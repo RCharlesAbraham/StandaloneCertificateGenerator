@@ -16,7 +16,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_id']) {
     <style>
         /* Inverted theme for Admin Login (maroon card, light inputs, white text) */
         body { background: #f5f5f5; }
-        .admin-login-wrapper { max-width:420px; margin:60px auto; }
+        .admin-login-wrapper { max: width 500px;px; margin:60px auto; }
         .admin-login-card {
             background: #67150a; /* maroon card */
             color: #ffffff; /* white text */
@@ -45,12 +45,12 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_id']) {
     <!-- Admin login form (same structure as main login, inverted colors) -->
     <div class="login-wrapper admin-login-wrapper">
         <div class="login-card admin-login-card">
-            <img src="../assets/MMC-LOGO-1-229x300.png" alt="Logo" class="login-logo" />
+            <img src="../assets/MMC-LOGO-1-229x300.png" alt="Logo" class="login-logo" style="border-radius: 10px;" />
             <div class="header" style="border-bottom:2px solid rgba(255,255,255,0.08); margin-bottom:16px; padding-bottom:12px;">
                 <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0; text-align:center;">
                     <div style="width:100%; display:block;">
-                        <h2 style="margin-left: 90px;font-size:1.4rem;">Admin Login</h2>
-                        <p style="margin-left: 90px;font-size:0.95rem;opacity:0.95;">Certificate Generator</p>
+                        <h2 style="margin-left:130px;font-size:1.4rem;">Admin Login</h2>
+                        <p style="margin-left: 130px;font-size:0.95rem;opacity:0.95;">Certificate Generator</p>
                     </div>
                 </div>
             </div>
@@ -70,11 +70,11 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_id']) {
 
                 <div class="login-actions" style="align-items:center;">
                     <label style="display:flex; align-items:center; gap:8px; color:rgba(255,255,255,0.9); font-weight:500;">
-                        <input type="checkbox" id="adminRemember" style=" margin-left: -160px;width:16px; height:16px;"> Remember me
+                        <input type="checkbox" id="adminRemember" style=" margin-left: -195px;width:16px; height:16px;"> Remember me
                     </label>
                 </div>
 
-                <div class="login-actions" style="margin-top:16px;">
+                <div class="login-actions" style="margin-top:16px; border-style: solid; border-width: 2px; border-color: #ffffff; border-radius: 10px;">
                     <button type="submit" id="adminLoginButton" class="btn btn-primary">Sign In</button>
                 </div>
 

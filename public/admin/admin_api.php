@@ -114,7 +114,7 @@ function getUsers($conn) {
 }
 
 function getCertificates($conn) {
-    $result = $conn->query("SELECT cl.*, u.name as user_name, CASE WHEN u.reg_no IS NOT NULL AND u.reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM certificate_logs cl JOIN users u ON cl.user_id = u.id ORDER BY cl.generated_at DESC LIMIT 100");
+    $result = $conn->query("SELECT cl.*, u.name as user_name, CASE WHEN u.reg_no IS NOT NULL AND u.reg_no <> '' THEN 'student' ELSE 'staff' END AS user_type FROM certificate_logs cl JOIN users u ON cl.user_id = u.id ORDER BY cl.created_at DESC LIMIT 100");
     
     $certificates = [];
     while ($row = $result->fetch_assoc()) {

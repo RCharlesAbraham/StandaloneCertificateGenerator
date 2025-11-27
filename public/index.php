@@ -279,15 +279,26 @@ if (isset($_SESSION['user_id'])) {
 
     <nav class="top-navbar">
         <div class="navbar-brand">
-            <div class="logo-placeholder" title="Click to change logo" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <div class="logo-placeholder" title="Click to change logo" style="padding-bottom:10px; padding-top:10px; display:flex;align-items:center;gap:8px;cursor:pointer;">
                 <label for="logoUpload" style="display:inline-block; margin:0;">
-                    <img id="logoImg" src="assets/MMC-LOGO-2-229x300.png" alt="Logo placeholder" width="36" height="36"
-                         style="object-fit:contain; border-radius:4px; transform:translateY(4px);">
-                </label>
+                    <img id="logoImg" src="assets/MMC-LOGO-2-229x300.png" alt="Logo placeholder"
+                        style="max-width:180px; max-height:260px; object-fit:contain; border-radius:4px; transform:translateY(4px);">
+                    </label
                 <input type="file" id="logoUpload" accept="image/*" style="display:none;">
             </div>
-            <span>Madras Christian College</span>
         </div>
+
+            <div class="header">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <h1>Certificate Generator</h1>
+            </div>
+
         <div class="navbar-user">
             <div class="user-info" id="userInfo">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -323,16 +334,11 @@ if (isset($_SESSION['user_id'])) {
     <div class="container">
         <!-- Left Sidebar - 25% -->
         <div class="sidebar">
-            <div class="header">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10 9 9 9 8 9" />
-                </svg>
-                <h1>Certificate Generator</h1>
-            </div>
+
+
+    <div class="header-section" style="padding-right:10px;">
+        <h3>Edit Panel</h3>
+    </div>
 
             <div class="form-section">
                 <div class="form-group">

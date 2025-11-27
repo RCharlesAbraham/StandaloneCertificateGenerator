@@ -941,7 +941,7 @@ if (generateBtn) {
 
         // Log to database
         try {
-            await fetch('log_certificate.php', {
+            await fetch('actions/log_certificate.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1145,7 +1145,7 @@ if (generateAllBtn) {
 
             // Log bulk generation to database
             try {
-                await fetch('log_certificate.php', {
+                await fetch('actions/log_certificate.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

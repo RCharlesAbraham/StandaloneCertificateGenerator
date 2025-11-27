@@ -17,209 +17,537 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
     <title>Admin Panel - Certificate Generator</title>
     <link rel="stylesheet" href="../styles.css">
     <style>
-        body {
-            background: #f5f7fa;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #f5f5f5;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .admin-navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 30px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 100vh;
         }
-        .admin-navbar h1 {
-            margin: 0;
-            font-size: 20px;
+        
+        /* Vertical Sidebar */
+        .admin-sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #67150a 0%, #4a0f07 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
-        .admin-user {
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .sidebar-header p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        .nav-item {
             display: flex;
             align-items: center;
-            gap: 15px;
-        }
-        .logout-btn {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            gap: 12px;
+            padding: 14px 25px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .nav-item.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-left-color: #fff;
+        }
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            opacity: 0.9;
+        }
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .admin-avatar svg {
+            width: 20px;
+            height: 20px;
+        }
+        .admin-details {
+            flex: 1;
+        }
+        .admin-details strong {
+            display: block;
             font-size: 14px;
         }
+        .admin-details span {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        .logout-btn {
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
         .logout-btn:hover {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.2);
         }
-        .admin-container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 20px;
+        
+        /* Main Content */
+        .admin-main {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px;
         }
+        .page-header {
+            margin-bottom: 25px;
+        }
+        .page-header h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         .stat-card {
             background: white;
             border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 18px;
         }
-        .stat-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            color: #666;
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-icon svg {
+            width: 26px;
+            height: 26px;
+        }
+        .stat-icon.maroon { background: rgba(103,21,10,0.1); color: #67150a; }
+        .stat-icon.blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
+        .stat-icon.green { background: rgba(34,197,94,0.1); color: #22c55e; }
+        .stat-icon.orange { background: rgba(249,115,22,0.1); color: #f97316; }
+        .stat-content h3 {
+            font-size: 12px;
+            color: #888;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
-        .stat-card .value {
-            font-size: 36px;
-            font-weight: bold;
+        .stat-content .value {
+            font-size: 28px;
+            font-weight: 700;
             color: #333;
         }
-        .stat-card.purple { border-left: 4px solid #667eea; }
-        .stat-card.blue { border-left: 4px solid #4facfe; }
-        .stat-card.green { border-left: 4px solid #43e97b; }
-        .stat-card.orange { border-left: 4px solid #fa709a; }
-        .tabs {
+        
+        /* Content Card */
+        .content-card {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             overflow: hidden;
         }
-        .tab-buttons {
+        .content-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #f0f0f0;
             display: flex;
-            border-bottom: 2px solid #f0f0f0;
-            background: #fafafa;
+            justify-content: space-between;
+            align-items: center;
         }
-        .tab-btn {
-            flex: 1;
-            padding: 15px 20px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-size: 14px;
+        .content-header h3 {
+            font-size: 16px;
+            color: #333;
             font-weight: 600;
-            color: #666;
-            transition: all 0.3s;
         }
-        .tab-btn.active {
-            color: #667eea;
-            background: white;
-            border-bottom: 3px solid #667eea;
+        .content-body {
+            padding: 0;
         }
-        .tab-content {
-            display: none;
-            padding: 25px;
-        }
-        .tab-content.active {
-            display: block;
-        }
+        
+        /* Table Styles */
         table {
             width: 100%;
             border-collapse: collapse;
         }
         table th {
-            background: #f8f9fa;
-            padding: 12px;
+            background: #fafafa;
+            padding: 14px 20px;
             text-align: left;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: #333;
-            border-bottom: 2px solid #e0e0e0;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #f0f0f0;
         }
         table td {
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f5f5f5;
             font-size: 13px;
+            color: #444;
         }
         table tr:hover {
-            background: #f8f9fa;
+            background: #fafafa;
         }
+        table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Badges */
         .badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
+            padding: 5px 12px;
+            border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-        .badge-student { background: #e3f2fd; color: #1976d2; }
-        .badge-staff { background: #f3e5f5; color: #7b1fa2; }
-        .badge-active { background: #e8f5e9; color: #388e3c; }
-        .loading {
+        .badge-student { background: #e0f2fe; color: #0369a1; }
+        .badge-staff { background: #fce7f3; color: #be185d; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-admin { background: rgba(103,21,10,0.1); color: #67150a; }
+        
+        /* Loading & Empty States */
+        .loading, .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 50px 20px;
             color: #999;
+        }
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        
+        /* Tab Content */
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <nav class="admin-navbar">
-        <h1>Admin Panel - Certificate Generator</h1>
-        <div class="admin-user">
-            <span>Welcome, <strong><?php echo htmlspecialchars($admin_username); ?></strong></span>
-            <button class="logout-btn" onclick="logout()">Logout</button>
+    <!-- Vertical Sidebar -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+
+        <div class="login-logo-wrapper logo-wrapper-admin" style="text-align:center; margin-bottom:12px;">
+                <img src="../assets/MMC-LOGO-1-229x300.png" alt="MCC-MRF Logo" class="login-logo-admin" style=" ">
+            </div>
+            <h1>MCC Certificate</h1>
+            <p>Admin Dashboard</p>
         </div>
-    </nav>
+        
+        <nav class="sidebar-nav">
+            <a class="nav-item active" data-tab="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                Dashboard
+            </a>
+            <a class="nav-item" data-tab="users">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Users
+            </a>
+            <a class="nav-item" data-tab="certificates">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                Certificates
+            </a>
+            <a class="nav-item" data-tab="activity">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Activity Logs
+            </a>
+            <a class="nav-item" data-tab="sessions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Sessions
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="admin-info">
+                <div class="admin-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <div class="admin-details">
+                    <strong><?php echo htmlspecialchars($admin_username); ?></strong>
+                    <span>Administrator</span>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Logout
+            </button>
+        </div>
+    </aside>
 
-    <div class="admin-container">
-        <!-- Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card purple">
-                <h3>Total Users</h3>
-                <div class="value" id="totalUsers">-</div>
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab" class="tab-panel active">
+            <div class="page-header">
+                <h2>Dashboard Overview</h2>
+                <p>Welcome back! Here's what's happening with your certificate system.</p>
             </div>
-            <div class="stat-card blue">
-                <h3>Students</h3>
-                <div class="value" id="totalStudents">-</div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon maroon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Total Users</h3>
+                        <div class="value" id="totalUsers">-</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Students</h3>
+                        <div class="value" id="totalStudents">-</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Staff</h3>
+                        <div class="value" id="totalStaff">-</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Certificates</h3>
+                        <div class="value" id="totalCertificates">-</div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card green">
-                <h3>Staff</h3>
-                <div class="value" id="totalStaff">-</div>
-            </div>
-            <div class="stat-card orange">
-                <h3>Certificates Generated</h3>
-                <div class="value" id="totalCertificates">-</div>
+            
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>Recent Users</h3>
+                </div>
+                <div class="content-body" id="recentUsersTable">
+                    <div class="loading">Loading...</div>
+                </div>
             </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <div class="tab-buttons">
-                <button class="tab-btn active" onclick="showTab('users')">Users</button>
-                <button class="tab-btn" onclick="showTab('certificates')">Certificates</button>
-                <button class="tab-btn" onclick="showTab('activity')">Activity Logs</button>
-                <button class="tab-btn" onclick="showTab('sessions')">Active Sessions</button>
+        <!-- Users Tab -->
+        <div id="usersTab" class="tab-panel">
+            <div class="page-header">
+                <h2>User Management</h2>
+                <p>View and manage all registered users in the system.</p>
             </div>
-
-            <div id="usersTab" class="tab-content active">
-                <h3 style="margin-top: 0;">All Users</h3>
-                <div id="usersTable" class="loading">Loading...</div>
-            </div>
-
-            <div id="certificatesTab" class="tab-content">
-                <h3 style="margin-top: 0;">Certificate Generation History</h3>
-                <div id="certificatesTable" class="loading">Loading...</div>
-            </div>
-
-            <div id="activityTab" class="tab-content">
-                <h3 style="margin-top: 0;">User Activity Logs</h3>
-                <div id="activityTable" class="loading">Loading...</div>
-            </div>
-
-            <div id="sessionsTab" class="tab-content">
-                <h3 style="margin-top: 0;">Active User Sessions</h3>
-                <div id="sessionsTable" class="loading">Loading...</div>
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>All Users</h3>
+                </div>
+                <div class="content-body" id="usersTable">
+                    <div class="loading">Loading...</div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- Certificates Tab -->
+        <div id="certificatesTab" class="tab-panel">
+            <div class="page-header">
+                <h2>Certificate History</h2>
+                <p>Track all certificates generated through the system.</p>
+            </div>
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>Generated Certificates</h3>
+                </div>
+                <div class="content-body" id="certificatesTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Tab -->
+        <div id="activityTab" class="tab-panel">
+            <div class="page-header">
+                <h2>Activity Logs</h2>
+                <p>Monitor user activities and system events.</p>
+            </div>
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>Recent Activity</h3>
+                </div>
+                <div class="content-body" id="activityTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessionsTab" class="tab-panel">
+            <div class="page-header">
+                <h2>Active Sessions</h2>
+                <p>View currently active user sessions.</p>
+            </div>
+            <div class="content-card">
+                <div class="content-header">
+                    <h3>Current Sessions</h3>
+                </div>
+                <div class="content-body" id="sessionsTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // Load dashboard stats on page load
+        // Tab Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const tab = this.dataset.tab;
+                
+                // Update nav items
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update tab panels
+                document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+                document.getElementById(tab + 'Tab').classList.add('active');
+                
+                // Load data for tab
+                switch(tab) {
+                    case 'dashboard':
+                        loadDashboard();
+                        loadRecentUsers();
+                        break;
+                    case 'users':
+                        loadUsers();
+                        break;
+                    case 'certificates':
+                        loadCertificates();
+                        break;
+                    case 'activity':
+                        loadActivity();
+                        break;
+                    case 'sessions':
+                        loadSessions();
+                        break;
+                }
+            });
+        });
+
+        // Load dashboard stats
         async function loadDashboard() {
             try {
                 const response = await fetch('admin_api.php?action=dashboard');
@@ -236,6 +564,31 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
             }
         }
 
+        async function loadRecentUsers() {
+            try {
+                const response = await fetch('admin_api.php?action=users&limit=5');
+                const data = await response.json();
+                
+                if (data.success && data.users.length > 0) {
+                    let html = '<table><thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Joined</th></tr></thead><tbody>';
+                    data.users.slice(0, 5).forEach(user => {
+                        html += `<tr>
+                            <td><strong>${user.name}</strong></td>
+                            <td><span class="badge badge-${user.user_type}">${user.user_type}</span></td>
+                            <td>${user.email}</td>
+                            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('recentUsersTable').innerHTML = html;
+                } else {
+                    document.getElementById('recentUsersTable').innerHTML = '<div class="empty-state">No users found</div>';
+                }
+            } catch (error) {
+                document.getElementById('recentUsersTable').innerHTML = '<div class="empty-state">Error loading users</div>';
+            }
+        }
+
         async function loadUsers() {
             try {
                 const response = await fetch('admin_api.php?action=users');
@@ -245,21 +598,21 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Email</th><th>Department</th><th>Created</th></tr></thead><tbody>';
                     data.users.forEach(user => {
                         html += `<tr>
-                            <td>${user.id}</td>
-                            <td>${user.name}</td>
-                            <td><span class="badge badge-${user.user_type}">${user.user_type.toUpperCase()}</span></td>
+                            <td>#${user.id}</td>
+                            <td><strong>${user.name}</strong></td>
+                            <td><span class="badge badge-${user.user_type}">${user.user_type}</span></td>
                             <td>${user.email}</td>
-                            <td>${user.department}</td>
+                            <td>${user.department || '-'}</td>
                             <td>${new Date(user.created_at).toLocaleDateString()}</td>
                         </tr>`;
                     });
                     html += '</tbody></table>';
                     document.getElementById('usersTable').innerHTML = html;
                 } else {
-                    document.getElementById('usersTable').innerHTML = '<p>No users found</p>';
+                    document.getElementById('usersTable').innerHTML = '<div class="empty-state">No users found</div>';
                 }
             } catch (error) {
-                document.getElementById('usersTable').innerHTML = '<p>Error loading users</p>';
+                document.getElementById('usersTable').innerHTML = '<div class="empty-state">Error loading users</div>';
             }
         }
 
@@ -272,21 +625,21 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     let html = '<table><thead><tr><th>ID</th><th>User</th><th>Type</th><th>Recipient</th><th>Generated</th><th>Count</th></tr></thead><tbody>';
                     data.certificates.forEach(cert => {
                         html += `<tr>
-                            <td>${cert.id}</td>
-                            <td>${cert.user_name}</td>
+                            <td>#${cert.id}</td>
+                            <td><strong>${cert.user_name}</strong></td>
                             <td><span class="badge badge-${cert.user_type}">${cert.user_type}</span></td>
                             <td>${cert.recipient_name}</td>
-                            <td>${new Date(cert.generated_at).toLocaleString()}</td>
+                            <td>${new Date(cert.created_at).toLocaleString()}</td>
                             <td>${cert.bulk_count}</td>
                         </tr>`;
                     });
                     html += '</tbody></table>';
                     document.getElementById('certificatesTable').innerHTML = html;
                 } else {
-                    document.getElementById('certificatesTable').innerHTML = '<p>No certificates generated yet</p>';
+                    document.getElementById('certificatesTable').innerHTML = '<div class="empty-state">No certificates generated yet</div>';
                 }
             } catch (error) {
-                document.getElementById('certificatesTable').innerHTML = '<p>Error loading certificates</p>';
+                document.getElementById('certificatesTable').innerHTML = '<div class="empty-state">Error loading certificates</div>';
             }
         }
 
@@ -299,7 +652,7 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     let html = '<table><thead><tr><th>User</th><th>Type</th><th>Activity</th><th>Description</th><th>Time</th></tr></thead><tbody>';
                     data.activities.forEach(activity => {
                         html += `<tr>
-                            <td>${activity.user_name}</td>
+                            <td><strong>${activity.user_name}</strong></td>
                             <td><span class="badge badge-${activity.user_type}">${activity.user_type}</span></td>
                             <td>${activity.activity_type}</td>
                             <td>${activity.activity_description}</td>
@@ -309,10 +662,10 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     html += '</tbody></table>';
                     document.getElementById('activityTable').innerHTML = html;
                 } else {
-                    document.getElementById('activityTable').innerHTML = '<p>No activity logs found</p>';
+                    document.getElementById('activityTable').innerHTML = '<div class="empty-state">No activity logs found</div>';
                 }
             } catch (error) {
-                document.getElementById('activityTable').innerHTML = '<p>Error loading activity logs</p>';
+                document.getElementById('activityTable').innerHTML = '<div class="empty-state">Error loading activity logs</div>';
             }
         }
 
@@ -325,8 +678,8 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     let html = '<table><thead><tr><th>User</th><th>IP Address</th><th>Login Time</th><th>Last Activity</th><th>Status</th></tr></thead><tbody>';
                     data.sessions.forEach(session => {
                         html += `<tr>
-                            <td>${session.user_name || 'Unknown'}</td>
-                            <td>${session.ip_address}</td>
+                            <td><strong>${session.user_name || 'Unknown'}</strong></td>
+                            <td><code>${session.ip_address}</code></td>
                             <td>${new Date(session.login_time).toLocaleString()}</td>
                             <td>${new Date(session.last_activity).toLocaleString()}</td>
                             <td><span class="badge badge-active">${session.status}</span></td>
@@ -335,36 +688,10 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
                     html += '</tbody></table>';
                     document.getElementById('sessionsTable').innerHTML = html;
                 } else {
-                    document.getElementById('sessionsTable').innerHTML = '<p>No active sessions</p>';
+                    document.getElementById('sessionsTable').innerHTML = '<div class="empty-state">No active sessions</div>';
                 }
             } catch (error) {
-                document.getElementById('sessionsTable').innerHTML = '<p>Error loading sessions</p>';
-            }
-        }
-
-        function showTab(tab) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            // Show selected tab
-            document.getElementById(tab + 'Tab').classList.add('active');
-            event.target.classList.add('active');
-            
-            // Load data for tab
-            switch(tab) {
-                case 'users':
-                    loadUsers();
-                    break;
-                case 'certificates':
-                    loadCertificates();
-                    break;
-                case 'activity':
-                    loadActivity();
-                    break;
-                case 'sessions':
-                    loadSessions();
-                    break;
+                document.getElementById('sessionsTable').innerHTML = '<div class="empty-state">Error loading sessions</div>';
             }
         }
 
@@ -377,7 +704,7 @@ $admin_username = $_SESSION['admin_username'] ?? 'Admin';
         // Load initial data
         window.addEventListener('load', () => {
             loadDashboard();
-            loadUsers();
+            loadRecentUsers();
         });
     </script>
 </body>

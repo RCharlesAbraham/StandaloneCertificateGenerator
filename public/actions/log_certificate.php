@@ -38,22 +38,18 @@ if (empty($recipient_name)) {
 
 $conn = getDBConnection();
 
-// Insert certificate log
-$stmt = $conn->prepare("INSERT INTO certificate_logs (user_id, user_type, certificate_type, certificate_no, recipient_name, certified_for, from_date, to_date, template_used, generation_type, bulk_count, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+// Insert certificate log - columns match database schema
+$stmt = $conn->prepare("INSERT INTO certificate_logs (user_id, certificate_no, recipient_name, certified_for, from_date, to_date, generation_type, bulk_count, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-$certificate_type = 'appreciation'; // Default type
 $ip_address = $_SERVER['REMOTE_ADDR'];
 
-$stmt->bind_param("isssssssssis", 
+$stmt->bind_param("isssssiss", 
     $user_id, 
-    $user_type, 
-    $certificate_type,
     $certificate_no, 
     $recipient_name, 
     $certified_for, 
     $from_date, 
     $to_date, 
-    $template_used, 
     $generation_type, 
     $bulk_count,
     $ip_address
